@@ -10,18 +10,19 @@ export class DepartmentService {
     const existing = await prisma.department.findFirst({
       where: { name: { equals: input.name, mode: 'insensitive' } },
     });
-    if (existing)
-      throw new AppError('Department name already exists', 409, 'DEPT_EXISTS');
+    if (existing) {
+      throw new AppError('Tên phòng ban này đã tồn tại trong hệ thống.', 409, 'PHONG_BAN_DA_TON_TAI');
+    }
 
     const dept = await prisma.department.create({ data: input });
     await prisma.auditLog.create({
       data: {
         userId: createdByUserId,
         action: 'CREATE',
-        entity: 'Department',
+        entity: 'PhongBan',
         entityId: dept.id,
         newValues: { name: dept.name },
-        description: `Created department ${dept.name}`,
+        description: `Tạo mới phòng ban "${dept.name}"`,
       },
     });
     return dept;
@@ -47,7 +48,7 @@ export class DepartmentService {
         _count: { select: { employees: true } },
       },
     });
-    if (!dept) throw new AppError('Department not found', 404, 'NOT_FOUND');
+    if (!dept) throw new AppError('Không tìm thấy phòng ban.', 404, 'KHONG_TIM_THAY');
     return dept;
   }
 
@@ -65,11 +66,11 @@ export class DepartmentService {
       data: {
         userId: updatedByUserId,
         action: 'UPDATE',
-        entity: 'Department',
+        entity: 'PhongBan',
         entityId: id,
         oldValues: { name: existing.name },
         newValues: { name: updated.name },
-        description: `Updated department ${existing.name}`,
+        description: `Cập nhật thông tin phòng ban "${existing.name}"`,
       },
     });
     return updated;
@@ -80,12 +81,13 @@ export class DepartmentService {
     const empCount = await prisma.employee.count({
       where: { departmentId: id, status: { not: 'TERMINATED' } },
     });
-    if (empCount > 0)
+    if (empCount > 0) {
       throw new AppError(
-        'Cannot delete department with active employees',
+        'Không thể xóa phòng ban đang có nhân viên làm việc. Vui lòng chuyển nhân viên sang phòng ban khác trước.',
         400,
-        'DEPT_HAS_EMPLOYEES'
+        'PHONG_BAN_CO_NHAN_VIEN'
       );
+    }
 
     await prisma.department.update({
       where: { id },
@@ -95,9 +97,9 @@ export class DepartmentService {
       data: {
         userId: deletedByUserId,
         action: 'DELETE',
-        entity: 'Department',
+        entity: 'PhongBan',
         entityId: id,
-        description: `Deactivated department ${dept.name}`,
+        description: `Vô hiệu hóa phòng ban "${dept.name}"`,
       },
     });
   }

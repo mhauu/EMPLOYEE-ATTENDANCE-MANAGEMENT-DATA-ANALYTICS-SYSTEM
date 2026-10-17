@@ -23,18 +23,18 @@ export class ReportController {
       if (req.query.format === 'excel') {
         const buffer = reportService.exportToExcel(data);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=attendance_report.xlsx');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_chi_tiet_cham_cong.xlsx');
         return res.send(buffer);
       }
 
       if (req.query.format === 'csv') {
         const csv = reportService.exportToCsv(data.records);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=attendance_report.csv');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_chi_tiet_cham_cong.csv');
         return res.send(csv);
       }
 
-      return sendSuccess(res, data, 'Attendance report data');
+      return sendSuccess(res, data, 'Dữ liệu báo cáo chấm công chi tiết');
     } catch (err) {
       next(err);
     }
@@ -48,18 +48,18 @@ export class ReportController {
       if (req.query.format === 'excel') {
         const buffer = reportService.exportToExcel(data);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=late_report.xlsx');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_di_tre.xlsx');
         return res.send(buffer);
       }
 
       if (req.query.format === 'csv') {
         const csv = reportService.exportToCsv(data.records);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=late_report.csv');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_di_tre.csv');
         return res.send(csv);
       }
 
-      return sendSuccess(res, data, 'Late report data');
+      return sendSuccess(res, data, 'Dữ liệu báo cáo nhân viên đi trễ');
     } catch (err) {
       next(err);
     }
@@ -73,18 +73,18 @@ export class ReportController {
       if (req.query.format === 'excel') {
         const buffer = reportService.exportToExcel(data);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=overtime_report.xlsx');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_tang_ca_ot.xlsx');
         return res.send(buffer);
       }
 
       if (req.query.format === 'csv') {
         const csv = reportService.exportToCsv(data.records);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=overtime_report.csv');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_tang_ca_ot.csv');
         return res.send(csv);
       }
 
-      return sendSuccess(res, data, 'Overtime report data');
+      return sendSuccess(res, data, 'Dữ liệu báo cáo làm thêm giờ');
     } catch (err) {
       next(err);
     }
@@ -98,18 +98,18 @@ export class ReportController {
       if (req.query.format === 'excel') {
         const buffer = reportService.exportToExcel(data);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=leave_report.xlsx');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_don_nghi_phep.xlsx');
         return res.send(buffer);
       }
 
       if (req.query.format === 'csv') {
         const csv = reportService.exportToCsv(data.records);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=leave_report.csv');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=bao_cao_don_nghi_phep.csv');
         return res.send(csv);
       }
 
-      return sendSuccess(res, data, 'Leave report data');
+      return sendSuccess(res, data, 'Dữ liệu báo cáo đơn nghỉ phép');
     } catch (err) {
       next(err);
     }

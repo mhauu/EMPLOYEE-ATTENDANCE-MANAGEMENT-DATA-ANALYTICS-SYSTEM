@@ -11,16 +11,18 @@ import { UserRole } from '@prisma/client';
 async function generateEmployeeCode(): Promise<string> {
   const count = await prisma.employee.count();
   const num = count + 1;
-  return `EMP${String(num).padStart(4, '0')}`;
+  return `NV${String(num).padStart(4, '0')}`;
 }
 
 export class EmployeeService {
   async create(input: CreateEmployeeInput, createdByUserId: string) {
-    // Check email uniqueness
+    // Kiểm tra tính duy nhất của email
     const existing = await prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
     });
-    if (existing) throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
+    if (existing) {
+      throw new AppError('Email này đã được đăng ký trong hệ thống.', 409, 'EMAIL_DA_TON_TAI');
+    }
 
     const passwordHash = await AuthService.hashPassword(input.password);
     const employeeCode = await generateEmployeeCode();
@@ -55,7 +57,7 @@ export class EmployeeService {
         },
       });
 
-      // Create leave balances for current year
+      // Tự động khởi tạo quỹ nghỉ phép năm cho nhân viên mới
       const leaveTypes = await tx.leaveType.findMany({ where: { isActive: true } });
       const year = new Date().getFullYear();
       await tx.leaveBalance.createMany({
@@ -64,17 +66,20 @@ export class EmployeeService {
           leaveTypeId: lt.id,
           year,
           totalDays: lt.defaultDaysPerYear,
+          usedDays: 0,
+          pendingDays: 0,
         })),
       });
 
+      // Ghi nhật ký kiểm toán
       await tx.auditLog.create({
         data: {
           userId: createdByUserId,
           action: 'CREATE',
-          entity: 'Employee',
+          entity: 'NhanVien',
           entityId: employee.id,
           newValues: { employeeCode, email: input.email, fullName: input.fullName },
-          description: `Created employee ${input.fullName} (${employeeCode})`,
+          description: `Thêm mới nhân viên ${input.fullName} (${employeeCode})`,
         },
       });
 
@@ -93,7 +98,6 @@ export class EmployeeService {
       query;
     const skip = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (search) {
       where.OR = [
@@ -106,7 +110,7 @@ export class EmployeeService {
     if (positionId) where.positionId = positionId;
     if (status) where.status = status;
 
-    // Manager scope: restrict to their department
+    // Phân quyền: Trưởng phòng chỉ quản lý nhân viên thuộc phòng ban mình
     if (requestingUserRole === 'MANAGER') {
       const managerEmployee = await prisma.employee.findFirst({
         where: { userId: requestingUserId },
@@ -166,12 +170,12 @@ export class EmployeeService {
         },
       },
     });
-    if (!employee) throw new AppError('Employee not found', 404, 'NOT_FOUND');
+    if (!employee) throw new AppError('Không tìm thấy nhân viên.', 404, 'KHONG_TIM_THAY');
     return employee;
   }
 
   async findByUserId(userId: string) {
-    const employee = await prisma.employee.findFirst({
+    return prisma.employee.findFirst({
       where: { userId },
       include: {
         department: { select: { id: true, name: true } },
@@ -190,7 +194,6 @@ export class EmployeeService {
         },
       },
     });
-    return employee;
   }
 
   async update(id: string, input: UpdateEmployeeInput, updatedByUserId: string) {
@@ -221,7 +224,7 @@ export class EmployeeService {
         data: {
           userId: updatedByUserId,
           action: 'UPDATE',
-          entity: 'Employee',
+          entity: 'NhanVien',
           entityId: id,
           oldValues: {
             fullName: existing.fullName,
@@ -233,7 +236,7 @@ export class EmployeeService {
             status: input.status,
             departmentId: input.departmentId,
           },
-          description: `Updated employee ${existing.fullName}`,
+          description: `Cập nhật thông tin nhân viên ${existing.fullName}`,
         },
       });
 

@@ -11,21 +11,26 @@ export async function authenticate(
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      sendUnauthorized(res, 'No token provided');
+      sendUnauthorized(res, 'Chưa cung cấp mã xác thực (Token). Vui lòng đăng nhập.');
       return;
     }
 
     const token = authHeader.substring(7);
     const payload = verifyAccessToken(token);
 
-    // Verify user still exists and is active
+    // Xác minh tài khoản còn tồn tại và đang hoạt động
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
-      include: { employee: { select: { id: true } } },
+      include: { employee: { select: { id: true, status: true } } },
     });
 
     if (!user || !user.isActive) {
-      sendUnauthorized(res, 'User account is inactive or not found');
+      sendUnauthorized(res, 'Tài khoản người dùng đã bị khóa hoặc không tồn tại.');
+      return;
+    }
+
+    if (user.employee && user.employee.status === 'TERMINATED') {
+      sendUnauthorized(res, 'Tài khoản nhân viên này đã ngừng hoạt động.');
       return;
     }
 
@@ -38,6 +43,6 @@ export async function authenticate(
 
     next();
   } catch {
-    sendUnauthorized(res, 'Invalid or expired token');
+    sendUnauthorized(res, 'Phiên đăng nhập đã hết hạn hoặc mã xác thực không hợp lệ.');
   }
 }

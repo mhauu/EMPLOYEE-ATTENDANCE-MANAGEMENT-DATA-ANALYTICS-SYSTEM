@@ -11,7 +11,7 @@ interface DateRange {
 
 export class AnalyticsService {
   /**
-   * Admin dashboard summary — real data only, no hardcoded values
+   * Tổng quan Bảng điều khiển Quản trị viên / Trưởng phòng (100% dữ liệu thật từ DB)
    */
   async getDashboardSummary() {
     const today = new Date();
@@ -78,7 +78,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Attendance trend over the last N days
+   * Biểu đồ đường xu hướng chấm công theo chuỗi thời gian
    */
   async getAttendanceTrend(days = 30, filters: DateRange = {}) {
     const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
@@ -86,7 +86,6 @@ export class AnalyticsService {
       ? new Date(filters.startDate)
       : subDays(endDate, days - 1);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       workDate: { gte: startDate, lte: endDate },
     };
@@ -102,7 +101,6 @@ export class AnalyticsService {
       orderBy: { workDate: 'asc' },
     });
 
-    // Group by date
     const dateMap: Record<
       string,
       { date: string; present: number; late: number; absent: number; leave: number }
@@ -117,7 +115,7 @@ export class AnalyticsService {
         dateMap[dateStr].present += r._count.status;
       } else if (r.status === 'LATE') {
         dateMap[dateStr].late += r._count.status;
-        dateMap[dateStr].present += r._count.status; // late = also present
+        dateMap[dateStr].present += r._count.status;
       } else if (r.status === 'ABSENT') {
         dateMap[dateStr].absent += r._count.status;
       } else if (r.status === 'LEAVE') {
@@ -129,7 +127,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Department-level analytics
+   * Phân tích số liệu tổng hợp theo từng Phòng ban
    */
   async getDepartmentAnalytics(filters: DateRange = {}) {
     const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
@@ -192,7 +190,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Employee analytics for a specific employee and date range
+   * Phân tích chỉ số chi tiết cho một nhân viên cụ thể
    */
   async getEmployeeAnalytics(employeeId: string, filters: DateRange = {}) {
     const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
@@ -217,7 +215,6 @@ export class AnalyticsService {
     const totalOvertimeHours = records.reduce((sum, r) => sum + Number(r.overtimeHours), 0);
     const totalLateMinutes = records.reduce((sum, r) => sum + r.lateMinutes, 0);
 
-    // Build day-by-day data for charts
     const dailyData = records.map((r) => ({
       date: format(r.workDate, 'yyyy-MM-dd'),
       workingHours: Number(r.workingHours),
@@ -243,7 +240,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Generate insights from real data
+   * Tự động sinh nhận định thông minh (Insights) thuần Việt từ dữ liệu tổng hợp
    */
   async getInsights(filters: DateRange = {}) {
     const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
@@ -262,21 +259,21 @@ export class AnalyticsService {
     const insights: string[] = [];
 
     if (records.length === 0) {
-      return ['Insufficient data for this analysis.'];
+      return ['Chưa đủ dữ liệu chấm công để kết xuất nhận định thống kê cho kỳ này.'];
     }
 
-    // Attendance rate insight
+    // Nhận định về tỷ lệ chuyên cần
     const present = records.filter((r) =>
       ['PRESENT', 'LATE', 'EARLY_LEAVE', 'OVERTIME'].includes(r.status)
     ).length;
     const attendanceRate = Math.round((present / records.length) * 1000) / 10;
-    insights.push(`Attendance rate for the selected period is ${attendanceRate}%.`);
+    insights.push(`Tỷ lệ chuyên cần toàn doanh nghiệp trong giai đoạn này đạt ${attendanceRate}%.`);
 
-    // Late arrivals by day of week
+    // Nhận định về ngày trong tuần có số ca đi trễ cao nhất
     const lateByDay: Record<string, number> = {
-      Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0,
+      'Thứ Hai': 0, 'Thứ Ba': 0, 'Thứ Tư': 0, 'Thứ Năm': 0, 'Thứ Sáu': 0,
     };
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     records.filter((r) => r.lateMinutes > 0).forEach((r) => {
       const day = dayNames[r.workDate.getDay()];
       if (lateByDay[day] !== undefined) lateByDay[day]++;
@@ -288,28 +285,28 @@ export class AnalyticsService {
     );
     if (maxLateDay.count > 0) {
       insights.push(
-        `${maxLateDay.day} has the highest number of late arrivals (${maxLateDay.count} occurrences).`
+        `${maxLateDay.day} là ngày có tần suất nhân viên đi trễ cao nhất (${maxLateDay.count} lượt vi phạm).`
       );
     }
 
-    // Average working hours
+    // Nhận định về số giờ làm việc trung bình
     const totalWH = records.reduce((sum, r) => sum + Number(r.workingHours), 0);
     const avgWH = present > 0 ? Math.round((totalWH / present) * 100) / 100 : 0;
     if (avgWH > 0) {
-      insights.push(`Average working hours per day: ${avgWH} hours.`);
+      insights.push(`Thời gian làm việc thực tế trung bình mỗi ngày đạt ${avgWH} giờ/nhân viên.`);
     }
 
-    // Overtime
+    // Nhận định về tăng ca
     const totalOT = records.reduce((sum, r) => sum + Number(r.overtimeHours), 0);
     if (totalOT > 0) {
-      insights.push(`Total overtime hours in the period: ${Math.round(totalOT * 100) / 100} hours.`);
+      insights.push(`Tổng số giờ làm thêm (tăng ca ngoài giờ) trong kỳ là ${Math.round(totalOT * 100) / 100} giờ.`);
     }
 
     return insights;
   }
 
   /**
-   * Status distribution for pie/donut chart
+   * Phân bổ trạng thái chấm công cho biểu đồ tròn (Donut / Pie Chart)
    */
   async getStatusDistribution(filters: DateRange = {}) {
     const endDate = filters.endDate ? new Date(filters.endDate) : new Date();

@@ -38,17 +38,20 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
 
   const getLabel = () => {
     switch (status) {
-      case 'PRESENT': return 'On Time';
-      case 'LATE': return 'Late Arrival';
-      case 'EARLY_LEAVE': return 'Early Leave';
-      case 'OVERTIME': return 'Overtime';
-      case 'LEAVE': return 'On Leave';
-      case 'ABSENT': return 'Absent';
-      case 'INCOMPLETE': return 'Incomplete';
-      case 'PENDING': return 'Pending';
-      case 'APPROVED': return 'Approved';
-      case 'REJECTED': return 'Rejected';
-      case 'CANCELLED': return 'Cancelled';
+      case 'PRESENT': return 'Đúng giờ';
+      case 'LATE': return 'Đi trễ';
+      case 'EARLY_LEAVE': return 'Về sớm';
+      case 'OVERTIME': return 'Tăng ca (OT)';
+      case 'LEAVE': return 'Nghỉ phép';
+      case 'ABSENT': return 'Vắng mặt';
+      case 'INCOMPLETE': return 'Chưa hoàn thành';
+      case 'ACTIVE': return 'Đang làm việc';
+      case 'INACTIVE': return 'Tạm nghỉ';
+      case 'TERMINATED': return 'Đã nghỉ việc';
+      case 'PENDING': return 'Chờ phê duyệt';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Từ chối';
+      case 'CANCELLED': return 'Đã hủy';
       default: return status;
     }
   };

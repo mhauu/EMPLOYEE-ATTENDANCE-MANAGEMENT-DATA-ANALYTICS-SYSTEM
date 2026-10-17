@@ -11,6 +11,18 @@ export interface ReportFilter {
 }
 
 export class ReportService {
+  private formatStatusVi(status: string): string {
+    switch (status) {
+      case 'PRESENT': return 'Đúng giờ';
+      case 'LATE': return 'Đi trễ';
+      case 'EARLY_LEAVE': return 'Về sớm';
+      case 'OVERTIME': return 'Tăng ca (OT)';
+      case 'LEAVE': return 'Nghỉ phép có duyệt';
+      case 'ABSENT': return 'Vắng không phép';
+      default: return status;
+    }
+  }
+
   async getAttendanceReportData(filter: ReportFilter) {
     const where: any = {};
     if (filter.startDate || filter.endDate) {
@@ -49,47 +61,46 @@ export class ReportService {
     const totalLateMinutes = records.reduce((sum, r) => sum + r.lateMinutes, 0);
 
     return {
-      title: 'Attendance Detail Report',
+      title: 'Báo cáo Chi tiết Chấm công Nhân sự',
       generatedAt: new Date().toISOString(),
       filters: filter,
       summary: {
-        totalRecords,
-        presentCount,
-        lateCount,
-        totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
-        totalOvertimeHours: Math.round(totalOvertimeHours * 100) / 100,
-        totalLateMinutes,
-        attendanceRate: totalRecords > 0 ? Math.round((presentCount / totalRecords) * 1000) / 10 : 0,
+        'Tổng số bản ghi': totalRecords,
+        'Số lượt có mặt': presentCount,
+        'Số lượt đi trễ': lateCount,
+        'Tổng giờ làm việc (giờ)': Math.round(totalWorkingHours * 100) / 100,
+        'Tổng giờ tăng ca (giờ)': Math.round(totalOvertimeHours * 100) / 100,
+        'Tổng phút đi trễ (phút)': totalLateMinutes,
+        'Tỷ lệ chuyên cần (%)': totalRecords > 0 ? `${Math.round((presentCount / totalRecords) * 1000) / 10}%` : '0%',
       },
       records: records.map(r => ({
-        date: format(r.workDate, 'yyyy-MM-dd'),
-        employeeCode: r.employee.employeeCode,
-        employeeName: r.employee.fullName,
-        department: r.employee.department?.name || 'N/A',
-        position: r.employee.position?.name || 'N/A',
-        shift: r.shift.name,
-        workplace: r.location.name,
-        checkIn: r.checkIn ? format(r.checkIn, 'HH:mm:ss') : 'N/A',
-        checkOut: r.checkOut ? format(r.checkOut, 'HH:mm:ss') : 'N/A',
-        status: r.status,
-        lateMinutes: r.lateMinutes,
-        earlyLeaveMinutes: r.earlyLeaveMinutes,
-        workingHours: Number(r.workingHours),
-        overtimeHours: Number(r.overtimeHours),
+        'Ngày làm việc': format(r.workDate, 'yyyy-MM-dd'),
+        'Mã nhân viên': r.employee.employeeCode,
+        'Họ và tên': r.employee.fullName,
+        'Phòng ban': r.employee.department?.name || 'Chưa phân bổ',
+        'Chức vụ': r.employee.position?.name || 'Nhân viên',
+        'Ca làm việc': r.shift.name,
+        'Văn phòng': r.location.name,
+        'Giờ vào (Check-in)': r.checkIn ? format(r.checkIn, 'HH:mm:ss') : '—',
+        'Giờ ra (Check-out)': r.checkOut ? format(r.checkOut, 'HH:mm:ss') : '—',
+        'Trạng thái': this.formatStatusVi(r.status),
+        'Trễ (phút)': r.lateMinutes,
+        'Về sớm (phút)': r.earlyLeaveMinutes,
+        'Giờ làm việc': Number(r.workingHours),
+        'Giờ tăng ca': Number(r.overtimeHours),
       })),
     };
   }
 
   async getLateReportData(filter: ReportFilter) {
     const data = await this.getAttendanceReportData(filter);
-    const lateRecords = data.records.filter(r => r.lateMinutes > 0);
+    const lateRecords = data.records.filter(r => Number(r['Trễ (phút)']) > 0);
     return {
       ...data,
-      title: 'Late Arrivals Report',
+      title: 'Báo cáo Thống kê Đi trễ',
       summary: {
         ...data.summary,
-        totalLateRecords: lateRecords.length,
-        averageLateMinutes: lateRecords.length > 0 ? Math.round(data.summary.totalLateMinutes / lateRecords.length) : 0,
+        'Tổng số ca đi trễ': lateRecords.length,
       },
       records: lateRecords,
     };
@@ -97,13 +108,13 @@ export class ReportService {
 
   async getOvertimeReportData(filter: ReportFilter) {
     const data = await this.getAttendanceReportData(filter);
-    const otRecords = data.records.filter(r => r.overtimeHours > 0);
+    const otRecords = data.records.filter(r => Number(r['Giờ tăng ca']) > 0);
     return {
       ...data,
-      title: 'Overtime Working Hours Report',
+      title: 'Báo cáo Làm thêm giờ (Tăng ca OT)',
       summary: {
         ...data.summary,
-        totalOvertimeRecords: otRecords.length,
+        'Số ca có tăng ca': otRecords.length,
       },
       records: otRecords,
     };
@@ -138,29 +149,39 @@ export class ReportService {
       },
     });
 
+    const formatLeaveStatusVi = (st: string) => {
+      switch (st) {
+        case 'APPROVED': return 'Đã phê duyệt';
+        case 'PENDING': return 'Chờ phê duyệt';
+        case 'REJECTED': return 'Từ chối';
+        case 'CANCELLED': return 'Đã hủy';
+        default: return st;
+      }
+    };
+
     return {
-      title: 'Leave Requests Report',
+      title: 'Báo cáo Tổng hợp Đơn nghỉ phép',
       generatedAt: new Date().toISOString(),
       filters: filter,
       summary: {
-        totalRequests: requests.length,
-        approved: requests.filter(r => r.status === 'APPROVED').length,
-        pending: requests.filter(r => r.status === 'PENDING').length,
-        rejected: requests.filter(r => r.status === 'REJECTED').length,
-        totalDays: requests.reduce((sum, r) => sum + Number(r.totalDays), 0),
+        'Tổng số đơn': requests.length,
+        'Đã duyệt': requests.filter(r => r.status === 'APPROVED').length,
+        'Chờ duyệt': requests.filter(r => r.status === 'PENDING').length,
+        'Từ chối': requests.filter(r => r.status === 'REJECTED').length,
+        'Tổng số ngày nghỉ': requests.reduce((sum, r) => sum + Number(r.totalDays), 0),
       },
       records: requests.map(r => ({
-        employeeCode: r.employee.employeeCode,
-        employeeName: r.employee.fullName,
-        department: r.employee.department?.name || 'N/A',
-        leaveType: r.leaveType.name,
-        startDate: format(r.startDate, 'yyyy-MM-dd'),
-        endDate: format(r.endDate, 'yyyy-MM-dd'),
-        totalDays: Number(r.totalDays),
-        status: r.status,
-        reason: r.reason,
-        reviewedBy: r.reviewer?.email || 'N/A',
-        rejectionReason: r.rejectionReason || '',
+        'Mã nhân viên': r.employee.employeeCode,
+        'Họ và tên': r.employee.fullName,
+        'Phòng ban': r.employee.department?.name || 'Chưa phân bổ',
+        'Loại nghỉ phép': r.leaveType.name,
+        'Từ ngày': format(r.startDate, 'yyyy-MM-dd'),
+        'Đến ngày': format(r.endDate, 'yyyy-MM-dd'),
+        'Số ngày xin nghỉ': Number(r.totalDays),
+        'Trạng thái': formatLeaveStatusVi(r.status),
+        'Lý do nghỉ': r.reason,
+        'Người duyệt': r.reviewer?.email || 'Chưa duyệt',
+        'Lý do từ chối': r.rejectionReason || '—',
       })),
     };
   }
@@ -168,18 +189,18 @@ export class ReportService {
   exportToExcel(data: { title: string; summary: any; records: any[] }): Buffer {
     const wb = XLSX.utils.book_new();
 
-    // Summary sheet
+    // Sheet 1: Tóm tắt chỉ số
     const summaryRows = [
-      { Metric: 'Report Title', Value: data.title },
-      { Metric: 'Generated At', Value: new Date().toISOString() },
-      ...Object.entries(data.summary).map(([k, v]) => ({ Metric: k, Value: v })),
+      { 'Chỉ tiêu': 'Tiêu đề báo cáo', 'Giá trị': data.title },
+      { 'Chỉ tiêu': 'Thời điểm xuất báo cáo', 'Giá trị': new Date().toLocaleString('vi-VN') },
+      ...Object.entries(data.summary).map(([k, v]) => ({ 'Chỉ tiêu': k, 'Giá trị': v })),
     ];
     const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Tong_Quan');
 
-    // Details sheet
+    // Sheet 2: Danh sách chi tiết
     const wsDetails = XLSX.utils.json_to_sheet(data.records);
-    XLSX.utils.book_append_sheet(wb, wsDetails, 'Details');
+    XLSX.utils.book_append_sheet(wb, wsDetails, 'Chi_Tiet');
 
     return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   }
@@ -196,6 +217,8 @@ export class ReportService {
       });
       csvRows.push(values.join(','));
     }
-    return csvRows.join('\n');
+
+    // Đính kèm UTF-8 BOM (\uFEFF) để Microsoft Excel mở trực tiếp file CSV không bao giờ bị lỗi font tiếng Việt
+    return '\uFEFF' + csvRows.join('\n');
   }
 }

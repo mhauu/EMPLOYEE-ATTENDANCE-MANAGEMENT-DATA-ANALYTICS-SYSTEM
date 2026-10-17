@@ -23,19 +23,19 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
-      throw new AppError('Invalid email or password', 401, 'AUTH_FAILED');
+      throw new AppError('Email hoặc mật khẩu không chính xác.', 401, 'DANG_NHAP_THAT_BAI');
     }
 
     const passwordMatch = await bcrypt.compare(input.password, user.passwordHash);
     if (!passwordMatch) {
-      throw new AppError('Invalid email or password', 401, 'AUTH_FAILED');
+      throw new AppError('Email hoặc mật khẩu không chính xác.', 401, 'DANG_NHAP_THAT_BAI');
     }
 
     if (user.employee && user.employee.status === 'TERMINATED') {
       throw new AppError(
-        'Your account has been terminated. Please contact HR.',
+        'Tài khoản này đã bị khóa do nhân viên đã nghỉ việc. Vui lòng liên hệ phòng Nhân sự.',
         403,
-        'ACCOUNT_TERMINATED'
+        'TAI_KHOAN_BI_KHOA'
       );
     }
 
@@ -49,28 +49,28 @@ export class AuthService {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    // Store refresh token
+    // Lưu trữ refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await prisma.refreshToken.create({
       data: { token: refreshToken, userId: user.id, expiresAt },
     });
 
-    // Update last login
+    // Cập nhật thời gian đăng nhập gần nhất
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    // Audit log
+    // Ghi nhật ký kiểm toán
     await prisma.auditLog.create({
       data: {
         userId: user.id,
         action: 'LOGIN',
-        entity: 'User',
+        entity: 'TaiKhoan',
         entityId: user.id,
         ipAddress,
-        description: `User ${user.email} logged in`,
+        description: `Người dùng ${user.email} đăng nhập hệ thống thành công`,
       },
     });
 
@@ -95,9 +95,9 @@ export class AuthService {
       data: {
         userId,
         action: 'LOGOUT',
-        entity: 'User',
+        entity: 'TaiKhoan',
         entityId: userId,
-        description: 'User logged out',
+        description: 'Người dùng đã đăng xuất khỏi hệ thống',
       },
     });
   }
@@ -108,7 +108,7 @@ export class AuthService {
       where: { token },
     });
     if (!stored || stored.expiresAt < new Date()) {
-      throw new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
+      throw new AppError('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.', 401, 'TOKEN_HET_HAN');
     }
 
     const user = await prisma.user.findUnique({
@@ -116,7 +116,7 @@ export class AuthService {
       include: { employee: { select: { id: true } } },
     });
     if (!user || !user.isActive) {
-      throw new AppError('User not found or inactive', 401, 'USER_NOT_FOUND');
+      throw new AppError('Tài khoản không tồn tại hoặc đã bị vô hiệu hóa.', 401, 'TAI_KHOAN_KHONG_HOP_LE');
     }
 
     const newPayload = {
@@ -153,17 +153,17 @@ export class AuthService {
         },
       },
     });
-    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (!user) throw new AppError('Không tìm thấy thông tin tài khoản.', 404, 'KHONG_TIM_THAY');
     return user;
   }
 
   async changePassword(userId: string, input: ChangePasswordInput) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (!user) throw new AppError('Không tìm thấy tài khoản người dùng.', 404, 'KHONG_TIM_THAY');
 
     const match = await bcrypt.compare(input.currentPassword, user.passwordHash);
     if (!match) {
-      throw new AppError('Current password is incorrect', 400, 'WRONG_PASSWORD');
+      throw new AppError('Mật khẩu hiện tại không chính xác.', 400, 'MAT_KHAU_CU_SAI');
     }
 
     const newHash = await bcrypt.hash(input.newPassword, BCRYPT_ROUNDS);
@@ -172,7 +172,7 @@ export class AuthService {
       data: { passwordHash: newHash },
     });
 
-    // Invalidate all refresh tokens for security
+    // Vô hiệu hóa tất cả các phiên đăng nhập cũ để đảm bảo an toàn
     await prisma.refreshToken.deleteMany({ where: { userId } });
   }
 

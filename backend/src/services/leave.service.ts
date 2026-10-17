@@ -5,10 +5,9 @@ import {
   ReviewLeaveInput,
   LeaveQueryInput,
 } from '../validators/leave.validator';
-import { differenceInBusinessDays, addDays } from 'date-fns';
 
 function countBusinessDays(start: Date, end: Date): number {
-  // Simple business day counter (Mon-Fri)
+  // Đếm số ngày làm việc thực tế (Thứ 2 đến Thứ 6)
   let count = 0;
   const current = new Date(start);
   while (current <= end) {
@@ -44,18 +43,18 @@ export class LeaveService {
     const totalDays = countBusinessDays(start, end);
 
     if (totalDays <= 0) {
-      throw new AppError('Leave dates must include at least 1 working day', 400, 'INVALID_DATES');
+      throw new AppError('Khoảng thời gian xin nghỉ phải bao gồm ít nhất 1 ngày làm việc (Thứ 2 - Thứ 6).', 400, 'NGAY_NGHI_KHONG_HOP_LE');
     }
 
-    // Check leave type exists
+    // Kiểm tra loại phép có tồn tại
     const leaveType = await prisma.leaveType.findUnique({
       where: { id: input.leaveTypeId },
     });
     if (!leaveType) {
-      throw new AppError('Invalid leave type', 404, 'NOT_FOUND');
+      throw new AppError('Loại nghỉ phép không tồn tại trong hệ thống.', 404, 'KHONG_TIM_THAY_LOAI_PHEP');
     }
 
-    // Check for overlapping requests
+    // Kiểm tra trùng lặp lịch nghỉ đã xin trước đó
     const overlap = await prisma.leaveRequest.findFirst({
       where: {
         employeeId,
@@ -68,13 +67,13 @@ export class LeaveService {
     });
     if (overlap) {
       throw new AppError(
-        'You have an existing leave request that overlaps with these dates',
+        'Bạn đã có một đơn nghỉ phép khác trùng hoặc giao thoa với khoảng thời gian này.',
         409,
-        'LEAVE_OVERLAP'
+        'TRUNG_LICH_NGHI'
       );
     }
 
-    // Check balance if applicable
+    // Kiểm tra số ngày phép khả dụng trong năm hiện tại
     const year = new Date().getFullYear();
     const balance = await prisma.leaveBalance.findUnique({
       where: {
@@ -92,9 +91,9 @@ export class LeaveService {
 
     if (balance && availableDays < totalDays) {
       throw new AppError(
-        `Insufficient leave balance. Available: ${availableDays} days, Requested: ${totalDays} days`,
+        `Quỹ phép không đủ! Số ngày phép còn lại: ${availableDays} ngày, số ngày yêu cầu: ${totalDays} ngày.`,
         400,
-        'INSUFFICIENT_BALANCE'
+        'KHONG_DU_PHEP'
       );
     }
 
@@ -115,7 +114,7 @@ export class LeaveService {
         },
       });
 
-      // Update pending days in balance
+      // Tăng số ngày phép đang chờ duyệt trong quỹ
       if (balance) {
         await tx.leaveBalance.update({
           where: { id: balance.id },
@@ -126,8 +125,8 @@ export class LeaveService {
       await tx.notification.create({
         data: {
           userId,
-          title: 'Leave Request Submitted',
-          message: `Your ${leaveType.name} leave request for ${totalDays} day(s) has been submitted for review.`,
+          title: 'Đã gửi đơn xin nghỉ phép',
+          message: `Đơn xin nghỉ phép "${leaveType.name}" (${totalDays} ngày) đã được gửi đến quản lý để phê duyệt.`,
           type: 'LEAVE_SUBMITTED',
         },
       });
@@ -142,17 +141,24 @@ export class LeaveService {
     const request = await prisma.leaveRequest.findUnique({
       where: { id: requestId },
       include: {
-        employee: { include: { user: true } },
+        employee: {
+          include: {
+            user: true,
+            shiftAssignments: { where: { isActive: true }, take: 1 },
+            locationAssignments: { where: { isActive: true }, take: 1 },
+          },
+        },
         leaveType: true,
       },
     });
 
-    if (!request) throw new AppError('Leave request not found', 404, 'NOT_FOUND');
+    if (!request) throw new AppError('Không tìm thấy đơn nghỉ phép.', 404, 'KHONG_TIM_THAY');
     if (request.status !== 'PENDING') {
-      throw new AppError('Only pending requests can be approved', 400, 'INVALID_STATUS');
+      throw new AppError('Chỉ có thể phê duyệt các đơn đang ở trạng thái chờ duyệt.', 400, 'TRANG_THAI_KHONG_HOP_LE');
     }
 
     await prisma.$transaction(async (tx) => {
+      // 1. Cập nhật trạng thái đơn
       await tx.leaveRequest.update({
         where: { id: requestId },
         data: {
@@ -162,7 +168,7 @@ export class LeaveService {
         },
       });
 
-      // Update leave balance: move from pending to used
+      // 2. Chuyển số ngày từ "chờ duyệt" sang "đã sử dụng" trong quỹ phép
       const year = new Date().getFullYear();
       await tx.leaveBalance.updateMany({
         where: {
@@ -176,28 +182,80 @@ export class LeaveService {
         },
       });
 
+      // 3. Tự động sinh bản ghi điểm danh trạng thái "Nghỉ phép" cho các ngày làm việc
+      const shiftId = request.employee.shiftAssignments[0]?.shiftId;
+      const locationId = request.employee.locationAssignments[0]?.locationId;
+
+      if (shiftId && locationId) {
+        const curDate = new Date(request.startDate);
+        const endDate = new Date(request.endDate);
+
+        while (curDate <= endDate) {
+          const dayOfWeek = curDate.getDay();
+          // Chỉ tạo cho ngày làm việc (Thứ 2 đến Thứ 6)
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            const dateToRecord = new Date(curDate);
+            dateToRecord.setHours(0, 0, 0, 0);
+
+            // Kiểm tra xem đã có bản ghi chưa
+            const existAtt = await tx.attendance.findUnique({
+              where: {
+                employeeId_workDate: {
+                  employeeId: request.employeeId,
+                  workDate: dateToRecord,
+                },
+              },
+            });
+
+            if (!existAtt) {
+              await tx.attendance.create({
+                data: {
+                  employeeId: request.employeeId,
+                  shiftId,
+                  locationId,
+                  workDate: dateToRecord,
+                  status: 'LEAVE',
+                  workingHours: 0,
+                  notes: `Nghỉ phép đã được duyệt: ${request.leaveType.name}`,
+                },
+              });
+            } else {
+              await tx.attendance.update({
+                where: { id: existAtt.id },
+                data: {
+                  status: 'LEAVE',
+                  notes: `Cập nhật theo đơn nghỉ phép đã duyệt: ${request.leaveType.name}`,
+                },
+              });
+            }
+          }
+          curDate.setDate(curDate.getDate() + 1);
+        }
+      }
+
+      // 4. Ghi nhật ký kiểm toán
       await tx.auditLog.create({
         data: {
           userId: reviewerUserId,
           action: 'APPROVE',
-          entity: 'LeaveRequest',
+          entity: 'DonNghiPhep',
           entityId: requestId,
-          description: `Approved leave request for ${request.employee.fullName}`,
+          description: `Phê duyệt đơn nghỉ phép của nhân viên ${request.employee.fullName}`,
         },
       });
 
-      // Notify employee
+      // 5. Gửi thông báo cho nhân viên
       await tx.notification.create({
         data: {
           userId: request.employee.userId,
-          title: 'Leave Request Approved',
-          message: `Your ${request.leaveType.name} leave request has been approved.`,
+          title: 'Đơn nghỉ phép đã được phê duyệt',
+          message: `Đơn xin nghỉ phép "${request.leaveType.name}" của bạn đã được phê duyệt thành công.`,
           type: 'LEAVE_APPROVED',
         },
       });
     });
 
-    return { message: 'Leave request approved successfully' };
+    return { message: 'Phê duyệt đơn nghỉ phép thành công' };
   }
 
   async reject(
@@ -213,9 +271,9 @@ export class LeaveService {
       },
     });
 
-    if (!request) throw new AppError('Leave request not found', 404, 'NOT_FOUND');
+    if (!request) throw new AppError('Không tìm thấy đơn nghỉ phép.', 404, 'KHONG_TIM_THAY');
     if (request.status !== 'PENDING') {
-      throw new AppError('Only pending requests can be rejected', 400, 'INVALID_STATUS');
+      throw new AppError('Chỉ có thể từ chối các đơn đang ở trạng thái chờ duyệt.', 400, 'TRANG_THAI_KHONG_HOP_LE');
     }
 
     await prisma.$transaction(async (tx) => {
@@ -229,7 +287,7 @@ export class LeaveService {
         },
       });
 
-      // Return pending days to balance
+      // Hoàn trả ngày phép chờ duyệt vào quỹ
       const year = new Date().getFullYear();
       await tx.leaveBalance.updateMany({
         where: {
@@ -246,23 +304,23 @@ export class LeaveService {
         data: {
           userId: reviewerUserId,
           action: 'REJECT',
-          entity: 'LeaveRequest',
+          entity: 'DonNghiPhep',
           entityId: requestId,
-          description: `Rejected leave request for ${request.employee.fullName}`,
+          description: `Từ chối đơn nghỉ phép của nhân viên ${request.employee.fullName}. Lý do: ${input.rejectionReason || 'Không có'}`,
         },
       });
 
       await tx.notification.create({
         data: {
           userId: request.employee.userId,
-          title: 'Leave Request Rejected',
-          message: `Your ${request.leaveType.name} leave request has been rejected.${input.rejectionReason ? ` Reason: ${input.rejectionReason}` : ''}`,
+          title: 'Đơn nghỉ phép bị từ chối',
+          message: `Đơn xin nghỉ phép "${request.leaveType.name}" của bạn đã bị từ chối.${input.rejectionReason ? ` Lý do: ${input.rejectionReason}` : ''}`,
           type: 'LEAVE_REJECTED',
         },
       });
     });
 
-    return { message: 'Leave request rejected' };
+    return { message: 'Đã từ chối đơn nghỉ phép' };
   }
 
   async cancel(requestId: string, employeeId: string) {
@@ -270,12 +328,12 @@ export class LeaveService {
       where: { id: requestId },
     });
 
-    if (!request) throw new AppError('Leave request not found', 404, 'NOT_FOUND');
+    if (!request) throw new AppError('Không tìm thấy đơn nghỉ phép.', 404, 'KHONG_TIM_THAY');
     if (request.employeeId !== employeeId) {
-      throw new AppError('You can only cancel your own leave requests', 403, 'FORBIDDEN');
+      throw new AppError('Bạn chỉ có quyền hủy đơn nghỉ phép của chính mình.', 403, 'TU_CHOI_QUYEN');
     }
     if (request.status !== 'PENDING') {
-      throw new AppError('Only pending requests can be cancelled', 400, 'INVALID_STATUS');
+      throw new AppError('Chỉ có thể hủy đơn đang chờ duyệt.', 400, 'TRANG_THAI_KHONG_HOP_LE');
     }
 
     await prisma.$transaction(async (tx) => {
@@ -284,7 +342,7 @@ export class LeaveService {
         data: { status: 'CANCELLED' },
       });
 
-      // Return pending days
+      // Hoàn trả số ngày phép chờ duyệt vào quỹ
       const year = new Date().getFullYear();
       await tx.leaveBalance.updateMany({
         where: {
@@ -296,14 +354,13 @@ export class LeaveService {
       });
     });
 
-    return { message: 'Leave request cancelled' };
+    return { message: 'Đã hủy đơn nghỉ phép thành công' };
   }
 
   async findAll(query: LeaveQueryInput, requestingUserId: string, role: string) {
     const { page, limit, employeeId, leaveTypeId, status, startDate, endDate } = query;
     const skip = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (employeeId) where.employeeId = employeeId;
     if (leaveTypeId) where.leaveTypeId = leaveTypeId;
@@ -314,7 +371,7 @@ export class LeaveService {
       if (endDate) where.startDate.lte = new Date(endDate);
     }
 
-    // Manager scope
+    // Giới hạn phạm vi đối với Trưởng phòng (MANAGER)
     if (role === 'MANAGER') {
       const managerEmployee = await prisma.employee.findFirst({
         where: { userId: requestingUserId },

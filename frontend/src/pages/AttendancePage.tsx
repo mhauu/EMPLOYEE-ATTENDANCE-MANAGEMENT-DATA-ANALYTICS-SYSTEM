@@ -4,7 +4,7 @@ import api from '../api/client';
 import { AttendanceRecord, Department } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { Search, Filter, Download, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const AttendancePage: React.FC = () => {
@@ -15,7 +15,7 @@ export const AttendancePage: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Bộ lọc
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -37,7 +37,7 @@ export const AttendancePage: React.FC = () => {
       setRecords(res.data.data);
       if (res.data.meta) setMeta(res.data.meta);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export const AttendancePage: React.FC = () => {
         const res = await api.get('/departments');
         setDepartments(res.data.data);
       } catch {
-        // Ignore
+        // Bỏ qua
       }
     }
   };
@@ -64,7 +64,7 @@ export const AttendancePage: React.FC = () => {
 
   const handleExportCSV = () => {
     if (records.length === 0) return;
-    const headers = ['Date', 'Employee Code', 'Employee Name', 'Department', 'Shift', 'Workplace', 'Check-in', 'Check-out', 'Late (min)', 'Working (hr)', 'OT (hr)', 'Status'];
+    const headers = ['Ngày', 'Mã nhân viên', 'Họ và tên', 'Phòng ban', 'Ca làm việc', 'Văn phòng', 'Giờ vào', 'Giờ ra', 'Trễ (phút)', 'Về sớm (phút)', 'Giờ làm (h)', 'Tăng ca (h)', 'Trạng thái'];
     const rows = records.map((r) => [
       format(new Date(r.workDate), 'yyyy-MM-dd'),
       r.employee?.employeeCode || '',
@@ -72,21 +72,23 @@ export const AttendancePage: React.FC = () => {
       r.employee?.department?.name || '',
       r.shift?.name || '',
       r.location?.name || '',
-      r.checkIn ? format(new Date(r.checkIn), 'HH:mm:ss') : 'N/A',
-      r.checkOut ? format(new Date(r.checkOut), 'HH:mm:ss') : 'N/A',
+      r.checkIn ? format(new Date(r.checkIn), 'HH:mm:ss') : '—',
+      r.checkOut ? format(new Date(r.checkOut), 'HH:mm:ss') : '—',
       r.lateMinutes,
+      r.earlyLeaveMinutes,
       r.workingHours,
       r.overtimeHours,
       r.status,
     ]);
 
+    // Thêm ký tự UTF-8 BOM (\uFEFF) để file mở trong Microsoft Excel có đầy đủ dấu tiếng Việt chuẩn
     const csvContent =
-      'data:text/csv;charset=utf-8,' +
+      'data:text/csv;charset=utf-8,\uFEFF' +
       [headers.join(','), ...rows.map((e) => e.map((x) => `"${x}"`).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `attendance_${format(new Date(), 'yyyyMMdd')}.csv`);
+    link.setAttribute('download', `lich_su_cham_cong_${format(new Date(), 'yyyyMMdd')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -94,14 +96,14 @@ export const AttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Tiêu đề trang */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            {isEmployee ? 'My Attendance History' : 'Employee Attendance Logs'}
+            {isEmployee ? 'Lịch Sử Chấm Công Của Tôi' : 'Quản Lý Nhật Ký Chấm Công Nhân Sự'}
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Verified workplace GPS attendance records and working hour breakdowns
+            Dữ liệu xác thực GPS geofence, thời gian làm việc thực tế và chi tiết giờ vào ra
           </p>
         </div>
 
@@ -109,14 +111,14 @@ export const AttendancePage: React.FC = () => {
           onClick={handleExportCSV}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors self-start"
         >
-          <Download className="w-4 h-4 text-slate-500" /> Export CSV
+          <Download className="w-4 h-4 text-slate-500" /> Xuất file CSV
         </button>
       </div>
 
-      {/* Filter Bar */}
+      {/* Thanh công cụ lọc */}
       <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div>
-          <label className="block font-semibold text-slate-600 mb-1">From Date</label>
+          <label className="block font-semibold text-slate-600 mb-1">Từ ngày</label>
           <input
             type="date"
             value={startDate}
@@ -129,7 +131,7 @@ export const AttendancePage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block font-semibold text-slate-600 mb-1">To Date</label>
+          <label className="block font-semibold text-slate-600 mb-1">Đến ngày</label>
           <input
             type="date"
             value={endDate}
@@ -143,7 +145,7 @@ export const AttendancePage: React.FC = () => {
 
         {!isEmployee && (
           <div>
-            <label className="block font-semibold text-slate-600 mb-1">Department</label>
+            <label className="block font-semibold text-slate-600 mb-1">Phòng ban</label>
             <select
               value={departmentId}
               onChange={(e) => {
@@ -152,7 +154,7 @@ export const AttendancePage: React.FC = () => {
               }}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="">All Departments</option>
+              <option value="">Tất cả phòng ban</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -163,7 +165,7 @@ export const AttendancePage: React.FC = () => {
         )}
 
         <div>
-          <label className="block font-semibold text-slate-600 mb-1">Status</label>
+          <label className="block font-semibold text-slate-600 mb-1">Trạng thái điểm danh</label>
           <select
             value={status}
             onChange={(e) => {
@@ -172,43 +174,43 @@ export const AttendancePage: React.FC = () => {
             }}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500"
           >
-            <option value="">All Statuses</option>
-            <option value="PRESENT">On Time (Present)</option>
-            <option value="LATE">Late Arrival</option>
-            <option value="EARLY_LEAVE">Early Leave</option>
-            <option value="OVERTIME">Overtime</option>
-            <option value="LEAVE">On Leave</option>
-            <option value="ABSENT">Absent</option>
+            <option value="">Tất cả trạng thái</option>
+            <option value="PRESENT">Đúng giờ</option>
+            <option value="LATE">Đi trễ</option>
+            <option value="EARLY_LEAVE">Về sớm</option>
+            <option value="OVERTIME">Tăng ca (OT)</option>
+            <option value="LEAVE">Nghỉ phép</option>
+            <option value="ABSENT">Vắng mặt</option>
           </select>
         </div>
       </div>
 
-      {/* Attendance Table */}
+      {/* Bảng dữ liệu chấm công */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <LoadingSpinner text="Retrieving attendance records..." />
+          <LoadingSpinner text="Đang tải dữ liệu chấm công..." />
         ) : records.length === 0 ? (
-          <div className="p-12 text-center text-slate-600">
+          <div className="p-12 text-center text-slate-400">
             <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm font-medium">No attendance records found for this period.</p>
-            <p className="text-xs text-slate-600 mt-0.5">Try adjusting your filters above.</p>
+            <p className="text-sm font-medium">Không tìm thấy bản ghi chấm công nào phù hợp.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Vui lòng điều chỉnh lại khoảng ngày hoặc bộ lọc phía trên.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-600 uppercase font-semibold tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 uppercase font-semibold tracking-wider">
                 <tr>
-                  <th className="py-3.5 px-4">Date</th>
-                  {!isEmployee && <th className="py-3.5 px-4">Employee</th>}
-                  {!isEmployee && <th className="py-3.5 px-4">Department</th>}
-                  <th className="py-3.5 px-4">Shift</th>
-                  <th className="py-3.5 px-4">Workplace</th>
-                  <th className="py-3.5 px-4">Check In</th>
-                  <th className="py-3.5 px-4">Check Out</th>
-                  <th className="py-3.5 px-4">Late</th>
-                  <th className="py-3.5 px-4">Working</th>
-                  <th className="py-3.5 px-4">Overtime</th>
-                  <th className="py-3.5 px-4 text-right">Status</th>
+                  <th className="py-3.5 px-4">Ngày</th>
+                  {!isEmployee && <th className="py-3.5 px-4">Nhân viên</th>}
+                  {!isEmployee && <th className="py-3.5 px-4">Phòng ban</th>}
+                  <th className="py-3.5 px-4">Ca làm việc</th>
+                  <th className="py-3.5 px-4">Văn phòng</th>
+                  <th className="py-3.5 px-4">Giờ vào</th>
+                  <th className="py-3.5 px-4">Giờ ra</th>
+                  <th className="py-3.5 px-4">Đi trễ</th>
+                  <th className="py-3.5 px-4">Giờ làm</th>
+                  <th className="py-3.5 px-4">Tăng ca</th>
+                  <th className="py-3.5 px-4 text-right">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -222,18 +224,18 @@ export const AttendancePage: React.FC = () => {
                         <span className="font-semibold text-slate-800 block">
                           {r.employee?.fullName}
                         </span>
-                        <span className="text-[10px] text-slate-600">
+                        <span className="text-[10px] text-slate-400">
                           {r.employee?.employeeCode}
                         </span>
                       </td>
                     )}
                     {!isEmployee && (
                       <td className="py-3 px-4 text-slate-600">
-                        {r.employee?.department?.name || 'N/A'}
+                        {r.employee?.department?.name || '—'}
                       </td>
                     )}
                     <td className="py-3 px-4">{r.shift?.name}</td>
-                    <td className="py-3 px-4 text-slate-600">{r.location?.name}</td>
+                    <td className="py-3 px-4 text-slate-500">{r.location?.name}</td>
                     <td className="py-3 px-4 font-mono font-medium">
                       {r.checkIn ? format(new Date(r.checkIn), 'HH:mm:ss') : '—'}
                     </td>
@@ -242,9 +244,9 @@ export const AttendancePage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       {r.lateMinutes > 0 ? (
-                        <span className="font-semibold text-amber-600">+{r.lateMinutes}m</span>
+                        <span className="font-semibold text-amber-600">+{r.lateMinutes}p</span>
                       ) : (
-                        <span className="text-slate-600">0</span>
+                        <span className="text-slate-400">0</span>
                       )}
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-800">
@@ -254,7 +256,7 @@ export const AttendancePage: React.FC = () => {
                       {r.overtimeHours > 0 ? (
                         <span className="font-semibold text-indigo-600">+{r.overtimeHours}h</span>
                       ) : (
-                        <span className="text-slate-600">0</span>
+                        <span className="text-slate-400">0</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -267,10 +269,10 @@ export const AttendancePage: React.FC = () => {
           </div>
         )}
 
-        {/* Pagination footer */}
+        {/* Thanh phân trang */}
         <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span>
-            Showing page {meta.page} of {meta.totalPages} ({meta.total} records total)
+            Đang hiển thị trang {meta.page} trên tổng số {meta.totalPages} ({meta.total} kết quả)
           </span>
           <div className="flex items-center gap-1">
             <button

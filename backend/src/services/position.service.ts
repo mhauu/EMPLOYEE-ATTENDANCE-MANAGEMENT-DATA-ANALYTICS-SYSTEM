@@ -9,10 +9,10 @@ export class PositionService {
       data: {
         userId: createdByUserId,
         action: 'CREATE',
-        entity: 'Position',
+        entity: 'ChucVu',
         entityId: position.id,
         newValues: { name: position.name },
-        description: `Created position ${position.name}`,
+        description: `Thêm chức vụ mới: "${position.name}"`,
       },
     });
     return position;
@@ -40,7 +40,7 @@ export class PositionService {
         },
       },
     });
-    if (!position) throw new AppError('Position not found', 404, 'NOT_FOUND');
+    if (!position) throw new AppError('Không tìm thấy chức vụ.', 404, 'KHONG_TIM_THAY');
     return position;
   }
 
@@ -51,11 +51,11 @@ export class PositionService {
       data: {
         userId: updatedByUserId,
         action: 'UPDATE',
-        entity: 'Position',
+        entity: 'ChucVu',
         entityId: id,
         oldValues: { name: existing.name },
         newValues: { name: updated.name },
-        description: `Updated position ${existing.name}`,
+        description: `Cập nhật chức vụ "${existing.name}"`,
       },
     });
     return updated;
@@ -67,16 +67,16 @@ export class PositionService {
       where: { positionId: id, status: { not: 'TERMINATED' } },
     });
     if (empCount > 0) {
-      throw new AppError('Cannot delete position assigned to active employees', 400, 'POSITION_IN_USE');
+      throw new AppError('Không thể xóa chức vụ đang có nhân viên nắm giữ.', 400, 'CHUC_VU_DANG_SU_DUNG');
     }
     await prisma.position.update({ where: { id }, data: { isActive: false } });
     await prisma.auditLog.create({
       data: {
         userId: deletedByUserId,
         action: 'DELETE',
-        entity: 'Position',
+        entity: 'ChucVu',
         entityId: id,
-        description: `Deactivated position ${position.name}`,
+        description: `Vô hiệu hóa chức vụ "${position.name}"`,
       },
     });
   }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/client';
 import { Shift, Employee } from '../types';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { Plus, Briefcase, Clock, Calendar, Check, X } from 'lucide-react';
+import { Plus, Clock, Calendar, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const ShiftManagementPage: React.FC = () => {
@@ -10,7 +10,7 @@ export const ShiftManagementPage: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create shift modal
+  // Modal tạo ca làm việc
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [shiftForm, setShiftForm] = useState({
     name: '',
@@ -18,10 +18,10 @@ export const ShiftManagementPage: React.FC = () => {
     endTime: '17:00',
     breakStart: '12:00',
     breakEnd: '13:00',
-    gracePeriodMinutes: 10,
+    gracePeriodMinutes: 15,
   });
 
-  // Assign shift modal
+  // Modal phân ca nhân viên
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({
     employeeId: '',
@@ -40,7 +40,7 @@ export const ShiftManagementPage: React.FC = () => {
       setShifts(shiftRes.data.data);
       setEmployees(empRes.data.data);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -61,11 +61,13 @@ export const ShiftManagementPage: React.FC = () => {
         endTime: '17:00',
         breakStart: '12:00',
         breakEnd: '13:00',
-        gracePeriodMinutes: 10,
+        gracePeriodMinutes: 15,
       });
+      setMsg('Tạo ca làm việc mới thành công!');
+      setTimeout(() => setMsg(''), 4000);
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating shift');
+      alert(err.response?.data?.message || 'Lỗi khi tạo ca làm việc');
     }
   };
 
@@ -74,21 +76,21 @@ export const ShiftManagementPage: React.FC = () => {
     try {
       await api.post('/shifts/assign', assignForm);
       setShowAssignModal(false);
-      setMsg('Shift assigned successfully!');
+      setMsg('Phân ca làm việc cho nhân viên thành công!');
       setTimeout(() => setMsg(''), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error assigning shift');
+      alert(err.response?.data?.message || 'Lỗi khi phân ca');
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Tiêu đề */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Shift Management</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Quản Lý Ca Làm Việc</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Configure work schedules, grace periods, and assign shifts to personnel
+            Thiết lập khung giờ làm việc, thời gian ân hạn đi trễ và phân bổ lịch làm cho nhân viên
           </p>
         </div>
 
@@ -97,13 +99,13 @@ export const ShiftManagementPage: React.FC = () => {
             onClick={() => setShowAssignModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
           >
-            <Calendar className="w-4 h-4 text-slate-500" /> Assign Shift to Employee
+            <Calendar className="w-4 h-4 text-slate-500" /> Phân Ca Cho Nhân Viên
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-100 transition-colors"
           >
-            <Plus className="w-4 h-4" /> Create New Shift
+            <Plus className="w-4 h-4" /> Thêm Ca Làm Mới
           </button>
         </div>
       </div>
@@ -114,9 +116,9 @@ export const ShiftManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Shifts Grid */}
+      {/* Lưới hiển thị các ca làm việc */}
       {loading ? (
-        <LoadingSpinner text="Loading shifts..." />
+        <LoadingSpinner text="Đang tải dữ liệu ca làm việc..." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {shifts.map((s) => (
@@ -133,21 +135,21 @@ export const ShiftManagementPage: React.FC = () => {
 
               <div className="py-4 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
-                  <span>Working Hours:</span>
+                  <span>Khung giờ làm việc:</span>
                   <span className="font-semibold text-slate-800">
                     {s.startTime} — {s.endTime}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                  <span>Lunch Break:</span>
+                  <span>Khoảng nghỉ giữa ca:</span>
                   <span className="font-semibold text-slate-800">
                     {s.breakStart || '12:00'} — {s.breakEnd || '13:00'}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                  <span>Grace Period:</span>
+                  <span>Thời gian ân hạn trễ:</span>
                   <span className="font-semibold text-emerald-600">
-                    {s.gracePeriodMinutes} minutes
+                    {s.gracePeriodMinutes} phút
                   </span>
                 </div>
               </div>
@@ -156,31 +158,31 @@ export const ShiftManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create Shift Modal */}
+      {/* Modal Tạo Ca Làm Việc Mới */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">Create Work Shift</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-600">
+              <h3 className="text-base font-bold text-slate-800">Tạo Ca Làm Việc Mới</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreateShift} className="space-y-3 mt-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Shift Name</label>
+                <label className="block font-semibold text-slate-700 mb-1">Tên ca làm việc</label>
                 <input
                   type="text"
                   required
                   value={shiftForm.name}
                   onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })}
-                  placeholder="Morning Shift A"
+                  placeholder="Ví dụ: Ca Hành Chính Chuẩn"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Start Time (HH:MM)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Giờ bắt đầu (HH:MM)</label>
                   <input
                     type="time"
                     required
@@ -190,7 +192,7 @@ export const ShiftManagementPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">End Time (HH:MM)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Giờ kết thúc (HH:MM)</label>
                   <input
                     type="time"
                     required
@@ -202,7 +204,7 @@ export const ShiftManagementPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Break Start</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Nghỉ trưa từ</label>
                   <input
                     type="time"
                     value={shiftForm.breakStart}
@@ -211,7 +213,7 @@ export const ShiftManagementPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Break End</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Nghỉ trưa đến</label>
                   <input
                     type="time"
                     value={shiftForm.breakEnd}
@@ -222,7 +224,7 @@ export const ShiftManagementPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Grace Period (Minutes allowed late)
+                  Thời gian ân hạn cho phép đi trễ (phút)
                 </label>
                 <input
                   type="number"
@@ -243,13 +245,13 @@ export const ShiftManagementPage: React.FC = () => {
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
                 >
-                  Save Shift
+                  Lưu Ca Làm Việc
                 </button>
               </div>
             </form>
@@ -257,26 +259,26 @@ export const ShiftManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Assign Shift Modal */}
+      {/* Modal Phân Ca Cho Nhân Viên */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">Assign Shift to Employee</h3>
-              <button onClick={() => setShowAssignModal(false)} className="text-slate-600">
+              <h3 className="text-base font-bold text-slate-800">Phân Ca Làm Việc Cho Nhân Viên</h3>
+              <button onClick={() => setShowAssignModal(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleAssignShift} className="space-y-3 mt-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Select Employee</label>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn nhân viên</label>
                 <select
                   required
                   value={assignForm.employeeId}
                   onChange={(e) => setAssignForm({ ...assignForm, employeeId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
-                  <option value="">Select Employee</option>
+                  <option value="">-- Chọn nhân viên --</option>
                   {employees.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.fullName} ({e.employeeCode})
@@ -286,14 +288,14 @@ export const ShiftManagementPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Select Shift</label>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn ca làm việc</label>
                 <select
                   required
                   value={assignForm.shiftId}
                   onChange={(e) => setAssignForm({ ...assignForm, shiftId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
-                  <option value="">Select Shift</option>
+                  <option value="">-- Chọn ca làm việc --</option>
                   {shifts.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.startTime} - {s.endTime})
@@ -303,7 +305,7 @@ export const ShiftManagementPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Effective From</label>
+                <label className="block font-semibold text-slate-700 mb-1">Có hiệu lực từ ngày</label>
                 <input
                   type="date"
                   required
@@ -319,13 +321,13 @@ export const ShiftManagementPage: React.FC = () => {
                   onClick={() => setShowAssignModal(false)}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
                 >
-                  Confirm Assignment
+                  Xác Nhận Phân Ca
                 </button>
               </div>
             </form>

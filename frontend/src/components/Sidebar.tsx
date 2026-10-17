@@ -25,63 +25,72 @@ export const Sidebar: React.FC = () => {
         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`;
 
+  const getRoleBadge = (r?: string) => {
+    switch (r) {
+      case 'ADMIN': return 'Quản trị viên';
+      case 'MANAGER': return 'Trưởng phòng';
+      case 'EMPLOYEE': return 'Nhân viên';
+      default: return r;
+    }
+  };
+
   return (
     <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col h-screen fixed left-0 top-0 z-30">
-      {/* Brand Header */}
+      {/* Tiêu đề ứng dụng */}
       <div className="h-16 flex items-center px-6 border-b border-slate-200/80">
         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold mr-3 shadow-md shadow-indigo-200">
           W
         </div>
         <div>
           <h1 className="font-bold text-slate-800 text-sm tracking-tight leading-none">Workforce Hub</h1>
-          <span className="text-[10px] text-slate-600 font-medium">Attendance & Analytics</span>
+          <span className="text-[10px] text-slate-500 font-medium">Hệ thống Chấm công & Phân tích</span>
         </div>
       </div>
 
-      {/* Nav List */}
+      {/* Danh mục menu */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
         <div>
-          <p className="px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2">Main</p>
+          <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Chức năng chính</p>
           <nav className="space-y-1">
             <NavLink to="/dashboard" className={navItemClass}>
               <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
+              <span>Bảng điều khiển</span>
             </NavLink>
             <NavLink to="/attendance" className={navItemClass}>
               <Clock className="w-4 h-4" />
-              <span>Attendance</span>
+              <span>Lịch sử chấm công</span>
             </NavLink>
             <NavLink to="/leaves" className={navItemClass}>
               <CalendarCheck className="w-4 h-4" />
-              <span>Leave Requests</span>
+              <span>Đơn nghỉ phép</span>
             </NavLink>
           </nav>
         </div>
 
-        {/* Admin & Manager Section */}
+        {/* Mục dành cho Quản trị viên và Trưởng phòng */}
         {(role === 'ADMIN' || role === 'MANAGER') && (
           <div>
-            <p className="px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
-              Management
+            <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Quản trị nhân sự
             </p>
             <nav className="space-y-1">
               <NavLink to="/employees" className={navItemClass}>
                 <Users className="w-4 h-4" />
-                <span>Employees</span>
+                <span>Nhân sự</span>
               </NavLink>
               {role === 'ADMIN' && (
                 <>
                   <NavLink to="/departments" className={navItemClass}>
                     <Building2 className="w-4 h-4" />
-                    <span>Departments</span>
+                    <span>Phòng ban</span>
                   </NavLink>
                   <NavLink to="/shifts" className={navItemClass}>
                     <Briefcase className="w-4 h-4" />
-                    <span>Shifts</span>
+                    <span>Ca làm việc</span>
                   </NavLink>
                   <NavLink to="/workplaces" className={navItemClass}>
                     <MapPin className="w-4 h-4" />
-                    <span>Workplaces (GPS)</span>
+                    <span>Địa điểm GPS</span>
                   </NavLink>
                 </>
               )}
@@ -89,25 +98,25 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* Analytics & Reports */}
+        {/* Phân tích & Báo cáo số liệu */}
         {(role === 'ADMIN' || role === 'MANAGER') && (
           <div>
-            <p className="px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
-              Insights & Data
+            <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Thống kê & Báo cáo
             </p>
             <nav className="space-y-1">
               <NavLink to="/analytics" className={navItemClass}>
                 <BarChart3 className="w-4 h-4" />
-                <span>Analytics</span>
+                <span>Phân tích số liệu</span>
               </NavLink>
               <NavLink to="/reports" className={navItemClass}>
                 <FileSpreadsheet className="w-4 h-4" />
-                <span>Reports & Export</span>
+                <span>Báo cáo & Xuất file</span>
               </NavLink>
               {role === 'ADMIN' && (
                 <NavLink to="/audit-logs" className={navItemClass}>
                   <ShieldAlert className="w-4 h-4" />
-                  <span>Audit Logs</span>
+                  <span>Nhật ký kiểm toán</span>
                 </NavLink>
               )}
             </nav>
@@ -115,18 +124,18 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
 
-      {/* User Card at bottom */}
+      {/* Thông tin người dùng đăng nhập */}
       <div className="p-4 border-t border-slate-200/80 bg-slate-50/50">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
-            {user?.email[0].toUpperCase()}
+            {user?.fullName ? user.fullName[0].toUpperCase() : user?.email[0].toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-slate-800 truncate">
               {user?.fullName || user?.email.split('@')[0]}
             </p>
             <span className="inline-block text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-              {role}
+              {getRoleBadge(role)}
             </span>
           </div>
         </div>

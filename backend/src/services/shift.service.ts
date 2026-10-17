@@ -13,14 +13,14 @@ export class ShiftService {
       data: {
         userId: createdByUserId,
         action: 'CREATE',
-        entity: 'Shift',
+        entity: 'CaLamViec',
         entityId: shift.id,
         newValues: {
           name: shift.name,
           startTime: shift.startTime,
           endTime: shift.endTime,
         },
-        description: `Created shift ${shift.name}`,
+        description: `Tạo ca làm việc mới: "${shift.name}" (${shift.startTime} - ${shift.endTime})`,
       },
     });
     return shift;
@@ -35,7 +35,7 @@ export class ShiftService {
 
   async findById(id: string) {
     const shift = await prisma.shift.findUnique({ where: { id } });
-    if (!shift) throw new AppError('Shift not found', 404, 'NOT_FOUND');
+    if (!shift) throw new AppError('Không tìm thấy ca làm việc.', 404, 'KHONG_TIM_THAY');
     return shift;
   }
 
@@ -46,11 +46,11 @@ export class ShiftService {
       data: {
         userId: updatedByUserId,
         action: 'UPDATE',
-        entity: 'Shift',
+        entity: 'CaLamViec',
         entityId: id,
         oldValues: { name: existing.name, startTime: existing.startTime },
         newValues: { name: updated.name, startTime: updated.startTime },
-        description: `Updated shift ${existing.name}`,
+        description: `Cập nhật ca làm việc "${existing.name}"`,
       },
     });
     return updated;
@@ -63,15 +63,15 @@ export class ShiftService {
       data: {
         userId: deletedByUserId,
         action: 'DELETE',
-        entity: 'Shift',
+        entity: 'CaLamViec',
         entityId: id,
-        description: `Deactivated shift ${shift.name}`,
+        description: `Vô hiệu hóa ca làm việc "${shift.name}"`,
       },
     });
   }
 
   async assignShift(input: AssignShiftInput, assignedByUserId: string) {
-    // Deactivate existing active assignment
+    // Vô hiệu hóa phân ca cũ có hiệu lực của nhân viên này
     await prisma.employeeShift.updateMany({
       where: { employeeId: input.employeeId, isActive: true },
       data: {
@@ -98,22 +98,22 @@ export class ShiftService {
       data: {
         userId: assignedByUserId,
         action: 'ASSIGN',
-        entity: 'EmployeeShift',
+        entity: 'PhanCaNhanVien',
         entityId: assignment.id,
         newValues: {
           employeeId: input.employeeId,
           shiftId: input.shiftId,
         },
-        description: `Assigned shift ${assignment.shift.name} to ${assignment.employee.fullName}`,
+        description: `Phân ca "${assignment.shift.name}" cho nhân viên ${assignment.employee.fullName}`,
       },
     });
 
-    // Create notification for employee
+    // Tạo thông báo cho nhân viên
     await prisma.notification.create({
       data: {
         userId: assignment.employee.userId,
-        title: 'Shift Assignment Updated',
-        message: `Your shift has been updated to ${assignment.shift.name} (${assignment.shift.startTime} - ${assignment.shift.endTime})`,
+        title: 'Cập nhật phân ca làm việc mới',
+        message: `Bạn đã được phân công ca làm việc mới: "${assignment.shift.name}" (${assignment.shift.startTime} - ${assignment.shift.endTime}) từ ngày ${input.effectiveFrom}.`,
         type: 'SHIFT_ASSIGNED',
       },
     });

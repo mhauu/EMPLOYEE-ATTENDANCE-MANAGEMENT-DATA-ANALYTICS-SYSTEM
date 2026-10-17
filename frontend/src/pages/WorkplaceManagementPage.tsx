@@ -10,7 +10,7 @@ export const WorkplaceManagementPage: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create workplace modal
+  // Modal tạo địa điểm
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [workplaceForm, setWorkplaceForm] = useState({
     name: '',
@@ -20,7 +20,7 @@ export const WorkplaceManagementPage: React.FC = () => {
     allowedRadiusMeters: 100,
   });
 
-  // Assign workplace modal
+  // Modal phân bổ địa điểm cho nhân viên
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({
     employeeId: '',
@@ -39,7 +39,7 @@ export const WorkplaceManagementPage: React.FC = () => {
       setWorkplaces(locRes.data.data);
       setEmployees(empRes.data.data);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -61,9 +61,11 @@ export const WorkplaceManagementPage: React.FC = () => {
         longitude: 106.700806,
         allowedRadiusMeters: 100,
       });
+      setMsg('Tạo địa điểm văn phòng thành công!');
+      setTimeout(() => setMsg(''), 4000);
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating workplace');
+      alert(err.response?.data?.message || 'Lỗi khi tạo địa điểm văn phòng');
     }
   };
 
@@ -72,16 +74,16 @@ export const WorkplaceManagementPage: React.FC = () => {
     try {
       await api.post('/locations/assign', assignForm);
       setShowAssignModal(false);
-      setMsg('Workplace assigned to employee successfully!');
+      setMsg('Phân bổ văn phòng làm việc cho nhân viên thành công!');
       setTimeout(() => setMsg(''), 4000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error assigning workplace');
+      alert(err.response?.data?.message || 'Lỗi khi phân bổ văn phòng');
     }
   };
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation not supported');
+      alert('Trình duyệt không hỗ trợ định vị GPS');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -92,18 +94,18 @@ export const WorkplaceManagementPage: React.FC = () => {
           longitude: parseFloat(pos.coords.longitude.toFixed(6)),
         });
       },
-      () => alert('Could not get current GPS coordinates')
+      () => alert('Không thể lấy tọa độ GPS hiện tại của thiết bị')
     );
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Tiêu đề */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Workplace Geofencing (GPS)</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Quản Lý Địa Điểm Chấm Công (GPS Geofencing)</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Define corporate office coordinates, allowed check-in radius, and employee allocations
+            Cấu hình tọa độ văn phòng, bán kính cho phép và phân bổ nơi làm việc cho nhân viên
           </p>
         </div>
 
@@ -112,13 +114,13 @@ export const WorkplaceManagementPage: React.FC = () => {
             onClick={() => setShowAssignModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
           >
-            <Calendar className="w-4 h-4 text-slate-500" /> Assign Workplace to Employee
+            <Calendar className="w-4 h-4 text-slate-500" /> Phân Bổ Văn Phòng Cho Nhân Viên
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-100 transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add Workplace
+            <Plus className="w-4 h-4" /> Thêm Văn Phòng Mới
           </button>
         </div>
       </div>
@@ -129,20 +131,20 @@ export const WorkplaceManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Geofence notice */}
+      {/* Thông tin giải thích cơ chế Geofencing */}
       <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 text-xs text-indigo-900 flex items-start gap-3">
         <Shield className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
         <div>
-          <p className="font-semibold">Server-Side Geofencing Verification</p>
+          <p className="font-semibold">Cơ Chế Xác Thực Bán Kính Geofencing Trên Máy Chủ (Server-Side)</p>
           <p className="text-indigo-700 mt-0.5 leading-relaxed">
-            When employees check in, their browser transmits latitude and longitude. The backend computes the exact spherical distance using the Haversine formula against these designated workplace coordinates. Check-in is rejected if distance exceeds the allowed radius.
+            Hệ thống không dùng mã QR để tránh chia sẻ giả mạo. Khi nhân viên nhấn chấm công, tọa độ GPS được gửi lên máy chủ. Backend áp dụng công thức khoảng cách hình cầu Haversine để so khớp với tọa độ văn phòng được phân công. Nếu khoảng cách vượt quá bán kính quy định, yêu cầu sẽ bị từ chối ngay lập tức.
           </p>
         </div>
       </div>
 
-      {/* Workplaces Grid */}
+      {/* Lưới danh sách các địa điểm */}
       {loading ? (
-        <LoadingSpinner text="Loading workplaces..." />
+        <LoadingSpinner text="Đang tải danh sách địa điểm..." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {workplaces.map((w) => (
@@ -162,19 +164,19 @@ export const WorkplaceManagementPage: React.FC = () => {
 
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-mono text-[11px] space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Latitude:</span>
+                    <span className="text-slate-400">Vĩ độ (Latitude):</span>
                     <span className="font-semibold text-slate-800">{Number(w.latitude).toFixed(6)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Longitude:</span>
+                    <span className="text-slate-400">Kinh độ (Longitude):</span>
                     <span className="font-semibold text-slate-800">{Number(w.longitude).toFixed(6)}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-1">
-                  <span>Allowed Radius:</span>
+                  <span>Bán kính cho phép:</span>
                   <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
-                    {w.allowedRadiusMeters} meters
+                    {w.allowedRadiusMeters} mét
                   </span>
                 </div>
               </div>
@@ -183,55 +185,55 @@ export const WorkplaceManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create Workplace Modal */}
+      {/* Modal Thêm Văn Phòng Mới */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">New Workplace Geofence</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-600">
+              <h3 className="text-base font-bold text-slate-800">Thêm Văn Phòng Chấm Công Mới</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreateWorkplace} className="space-y-3 mt-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Workplace Name</label>
+                <label className="block font-semibold text-slate-700 mb-1">Tên văn phòng / Địa điểm</label>
                 <input
                   type="text"
                   required
                   value={workplaceForm.name}
                   onChange={(e) => setWorkplaceForm({ ...workplaceForm, name: e.target.value })}
-                  placeholder="Main Headquarters"
+                  placeholder="Ví dụ: Trụ sở chính TP. Hồ Chí Minh"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Street Address</label>
+                <label className="block font-semibold text-slate-700 mb-1">Địa chỉ chi tiết</label>
                 <input
                   type="text"
                   required
                   value={workplaceForm.address}
                   onChange={(e) => setWorkplaceForm({ ...workplaceForm, address: e.target.value })}
-                  placeholder="123 Corporate Blvd"
+                  placeholder="72 Lê Thánh Tôn, Bến Nghé, Quận 1, TP.HCM"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
               </div>
 
               <div className="flex justify-between items-center pt-1">
-                <span className="font-semibold text-slate-700">GPS Coordinates</span>
+                <span className="font-semibold text-slate-700">Tọa độ GPS Geofence</span>
                 <button
                   type="button"
                   onClick={handleUseCurrentLocation}
                   className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
                 >
-                  <Compass className="w-3.5 h-3.5" /> Use my current location
+                  <Compass className="w-3.5 h-3.5" /> Lấy tọa độ vị trí hiện tại
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-600 mb-1">Latitude</label>
+                  <label className="block font-semibold text-slate-600 mb-1">Vĩ độ (Latitude)</label>
                   <input
                     type="number"
                     step="0.000001"
@@ -244,7 +246,7 @@ export const WorkplaceManagementPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-600 mb-1">Longitude</label>
+                  <label className="block font-semibold text-slate-600 mb-1">Kinh độ (Longitude)</label>
                   <input
                     type="number"
                     step="0.000001"
@@ -260,7 +262,7 @@ export const WorkplaceManagementPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Allowed Check-in Radius (meters)
+                  Bán kính cho phép điểm danh (mét)
                 </label>
                 <input
                   type="number"
@@ -284,13 +286,13 @@ export const WorkplaceManagementPage: React.FC = () => {
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
                 >
-                  Save Workplace
+                  Lưu Địa Điểm
                 </button>
               </div>
             </form>
@@ -298,26 +300,26 @@ export const WorkplaceManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Assign Workplace Modal */}
+      {/* Modal Phân Bổ Văn Phòng Cho Nhân Viên */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">Assign Workplace to Employee</h3>
-              <button onClick={() => setShowAssignModal(false)} className="text-slate-600">
+              <h3 className="text-base font-bold text-slate-800">Phân Bổ Văn Phòng Cho Nhân Viên</h3>
+              <button onClick={() => setShowAssignModal(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleAssignWorkplace} className="space-y-3 mt-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Select Employee</label>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn nhân viên</label>
                 <select
                   required
                   value={assignForm.employeeId}
                   onChange={(e) => setAssignForm({ ...assignForm, employeeId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
-                  <option value="">Select Employee</option>
+                  <option value="">-- Chọn nhân viên --</option>
                   {employees.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.fullName} ({e.employeeCode})
@@ -327,24 +329,24 @@ export const WorkplaceManagementPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Select Workplace</label>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn văn phòng làm việc</label>
                 <select
                   required
                   value={assignForm.locationId}
                   onChange={(e) => setAssignForm({ ...assignForm, locationId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
-                  <option value="">Select Workplace</option>
+                  <option value="">-- Chọn văn phòng --</option>
                   {workplaces.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} ({w.allowedRadiusMeters}m radius)
+                      {w.name} (Bán kính: {w.allowedRadiusMeters}m)
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Effective From</label>
+                <label className="block font-semibold text-slate-700 mb-1">Có hiệu lực từ ngày</label>
                 <input
                   type="date"
                   required
@@ -360,13 +362,13 @@ export const WorkplaceManagementPage: React.FC = () => {
                   onClick={() => setShowAssignModal(false)}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
                 >
-                  Confirm Assignment
+                  Xác Nhận Phân Bổ
                 </button>
               </div>
             </form>

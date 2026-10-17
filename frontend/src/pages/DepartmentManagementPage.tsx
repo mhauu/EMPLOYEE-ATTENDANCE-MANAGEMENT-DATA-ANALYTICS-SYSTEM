@@ -18,7 +18,7 @@ export const DepartmentManagementPage: React.FC = () => {
       const res = await api.get('/departments');
       setDepartments(res.data.data);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -35,11 +35,11 @@ export const DepartmentManagementPage: React.FC = () => {
       setShowModal(false);
       setName('');
       setDescription('');
-      setMsg('Department created successfully!');
+      setMsg('Tạo mới phòng ban thành công!');
       setTimeout(() => setMsg(''), 4000);
       fetchDepartments();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating department');
+      alert(err.response?.data?.message || 'Lỗi khi tạo phòng ban');
     }
   };
 
@@ -47,9 +47,9 @@ export const DepartmentManagementPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Department Management</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Quản Lý Phòng Ban</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Organize company structure, teams, and divisional reporting
+            Thiết lập cơ cấu tổ chức doanh nghiệp, các bộ phận và phân bổ nhân sự
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export const DepartmentManagementPage: React.FC = () => {
           onClick={() => setShowModal(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-100 transition-colors self-start"
         >
-          <Plus className="w-4 h-4" /> Create Department
+          <Plus className="w-4 h-4" /> Thêm Phòng Ban Mới
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export const DepartmentManagementPage: React.FC = () => {
       )}
 
       {loading ? (
-        <LoadingSpinner text="Loading departments..." />
+        <LoadingSpinner text="Đang tải danh sách phòng ban..." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {departments.map((d) => (
@@ -83,14 +83,14 @@ export const DepartmentManagementPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 py-3 min-h-[44px]">
-                {d.description || 'No description provided.'}
+                {d.description || 'Chưa có mô tả chi tiết nhiệm vụ.'}
               </p>
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <Users className="w-3.5 h-3.5 text-slate-600" /> Employees:
+                  <Users className="w-3.5 h-3.5 text-slate-400" /> Số lượng nhân sự:
                 </span>
                 <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {d._count?.employees || 0}
+                  {d._count?.employees || 0} người
                 </span>
               </div>
             </div>
@@ -102,30 +102,30 @@ export const DepartmentManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800">Add Department</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-600">
+              <h3 className="text-base font-bold text-slate-800">Thêm Phòng Ban Mới</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="space-y-3 mt-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Department Name</label>
+                <label className="block font-semibold text-slate-700 mb-1">Tên phòng ban</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Quality Assurance"
+                  placeholder="Ví dụ: Phòng Kiểm Thử Chất Lượng (QA)"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Description</label>
+                <label className="block font-semibold text-slate-700 mb-1">Mô tả chức năng</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Responsibilities and purpose..."
+                  placeholder="Chức năng, nhiệm vụ và phạm vi hoạt động..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
               </div>
@@ -135,13 +135,13 @@ export const DepartmentManagementPage: React.FC = () => {
                   onClick={() => setShowModal(false)}
                   className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600"
                 >
-                  Cancel
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
                 >
-                  Save Department
+                  Lưu Phòng Ban
                 </button>
               </div>
             </form>

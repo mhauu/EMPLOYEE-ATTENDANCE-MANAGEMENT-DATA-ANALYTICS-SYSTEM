@@ -16,29 +16,30 @@ import { AttendanceStatus } from '@prisma/client';
 
 export class AttendanceService {
   /**
-   * CHECK-IN
-   * All business logic is enforced here on the backend:
-   * - Employee must be ACTIVE
-   * - Must have an active shift
-   * - Must have an assigned workplace
-   * - Must not already have an attendance record today
-   * - GPS must be within allowed radius (calculated server-side)
-   * - Late calculation done server-side
+   * CHẤM CÔNG VÀO CA (CHECK-IN)
+   * Toàn bộ ràng buộc nghiệp vụ được kiểm soát chặt chẽ ở máy chủ:
+   * 1. Nhân viên phải có trạng thái ACTIVE (Đang làm việc).
+   * 2. Phải có ca làm việc được phân công hợp lệ trong ngày.
+   * 3. Phải có địa điểm văn phòng được phân công hợp lệ trong ngày.
+   * 4. Không cho phép chấm công trùng lặp trong cùng một ngày.
+   * 5. Xác thực tọa độ GPS Geofence (Haversine): từ chối nếu vượt bán kính cho phép.
+   * 6. Tính số phút đi trễ có xét thời gian ân hạn (grace period).
    */
   async checkIn(employeeId: string, userId: string, input: CheckInInput) {
-    // 1. Verify employee is ACTIVE
+    // 1. Kiểm tra trạng thái nhân viên
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
+      include: { department: true },
     });
     if (!employee || employee.status !== 'ACTIVE') {
       throw new AppError(
-        'Only active employees can check in',
+        'Chỉ nhân viên đang có trạng thái hoạt động mới được phép chấm công.',
         403,
-        'EMPLOYEE_NOT_ACTIVE'
+        'NHAN_VIEN_KHONG_HOAT_DONG'
       );
     }
 
-    // 2. Get today's shift
+    // 2. Lấy ca làm việc có hiệu lực trong ngày hôm nay
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -53,16 +54,16 @@ export class AttendanceService {
       orderBy: { effectiveFrom: 'desc' },
     });
 
-    if (!shiftAssignment) {
+    if (!shiftAssignment || !shiftAssignment.shift.isActive) {
       throw new AppError(
-        'No active shift assignment found. Please contact your manager.',
+        'Bạn chưa được phân ca làm việc hợp lệ cho hôm nay. Vui lòng liên hệ Trưởng phòng hoặc Quản trị viên.',
         400,
-        'NO_SHIFT_ASSIGNED'
+        'CHUA_PHAN_CA'
       );
     }
     const shift = shiftAssignment.shift;
 
-    // 3. Get assigned workplace
+    // 3. Lấy văn phòng / địa điểm chấm công có hiệu lực trong ngày
     const locationAssignment = await prisma.employeeLocation.findFirst({
       where: {
         employeeId,
@@ -74,28 +75,28 @@ export class AttendanceService {
       orderBy: { effectiveFrom: 'desc' },
     });
 
-    if (!locationAssignment) {
+    if (!locationAssignment || !locationAssignment.location.isActive) {
       throw new AppError(
-        'No workplace assigned. Please contact your manager.',
+        'Bạn chưa được phân bổ văn phòng làm việc. Vui lòng liên hệ phòng Nhân sự.',
         400,
-        'NO_WORKPLACE_ASSIGNED'
+        'CHUA_PHAN_BO_VAN_PHONG'
       );
     }
     const location = locationAssignment.location;
 
-    // 4. Prevent duplicate check-in today
+    // 4. Ngăn chặn chấm công trùng lặp trong ngày
     const existingAttendance = await prisma.attendance.findFirst({
       where: { employeeId, workDate: today },
     });
     if (existingAttendance) {
       throw new AppError(
-        'You have already checked in today',
+        'Hôm nay bạn đã thực hiện chấm công vào ca rồi. Không thể chấm công lặp lại.',
         409,
-        'ALREADY_CHECKED_IN'
+        'DA_CHAM_CONG'
       );
     }
 
-    // 5. GPS VERIFICATION — backend calculates distance, never trusts frontend
+    // 5. XÁC THỰC GPS GEOFENCE BẰNG CÔNG THỨC HAVERSINE TRÊN BACKEND
     const { allowed, distance } = isWithinRadius(
       input.latitude,
       input.longitude,
@@ -106,13 +107,13 @@ export class AttendanceService {
 
     if (!allowed) {
       throw new AppError(
-        `Your location is outside the allowed check-in area. You are ${distance}m from ${location.name} (allowed: ${location.allowedRadiusMeters}m).`,
+        `Vị trí của bạn đang ở ngoài khu vực chấm công cho phép! Hiện bạn đang cách ${location.name} khoảng ${distance}m (Bán kính quy định tối đa là ${location.allowedRadiusMeters}m).`,
         400,
-        'OUTSIDE_ALLOWED_RADIUS'
+        'NGOAI_BAN_KINH_CHO_PHEP'
       );
     }
 
-    // 6. Calculate late minutes — BACKEND ONLY
+    // 6. Tính số phút đi trễ (Có xét thời gian ân hạn cấu hình theo ca)
     const now = new Date();
     const lateMinutes = calculateLateMinutes(
       now,
@@ -121,13 +122,13 @@ export class AttendanceService {
       today
     );
 
-    // 7. Determine status
+    // 7. Xác định trạng thái điểm danh ban đầu
     let status: AttendanceStatus = 'PRESENT';
     if (lateMinutes > 0) {
       status = 'LATE';
     }
 
-    // 8. Create attendance record
+    // 8. Lưu bản ghi điểm danh
     const attendance = await prisma.attendance.create({
       data: {
         employeeId,
@@ -147,15 +148,16 @@ export class AttendanceService {
       },
     });
 
-    // 9. Create notification
+    // 9. Gửi thông báo hệ thống
+    const gioVao = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     await prisma.notification.create({
       data: {
         userId,
-        title: lateMinutes > 0 ? 'Late Check-In' : 'Successful Check-In',
+        title: lateMinutes > 0 ? 'Chấm công vào ca: Đi trễ' : 'Chấm công vào ca: Đúng giờ',
         message:
           lateMinutes > 0
-            ? `You checked in at ${now.toLocaleTimeString()} — ${lateMinutes} minutes late`
-            : `You checked in at ${now.toLocaleTimeString()} — On time`,
+            ? `Bạn đã chấm công vào lúc ${gioVao} — Trễ ${lateMinutes} phút so với thời gian quy định.`
+            : `Bạn đã chấm công vào lúc ${gioVao} — Đúng giờ. Chúc bạn một ngày làm việc hiệu quả!`,
         type: lateMinutes > 0 ? 'LATE' : 'CHECK_IN',
       },
     });
@@ -172,11 +174,14 @@ export class AttendanceService {
   }
 
   /**
-   * CHECK-OUT
-   * Calculates working hours, overtime, early leave — all server-side.
+   * KẾT THÚC CA LÀM VIỆC (CHECK-OUT)
+   * Toàn bộ phép tính được thực hiện trên Backend:
+   * - Xác thực GPS có mặt tại văn phòng khi tan ca.
+   * - Khấu trừ giờ nghỉ trưa theo ca để ra giờ làm thực tế.
+   * - Tính giờ về sớm (Early Leave) và giờ làm thêm (Overtime).
    */
   async checkOut(employeeId: string, userId: string, input: CheckOutInput) {
-    // 1. Find today's active attendance
+    // 1. Tìm bản ghi chấm công của ngày hôm nay
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -188,27 +193,23 @@ export class AttendanceService {
       },
     });
 
-    if (!attendance) {
+    if (!attendance || !attendance.checkIn) {
       throw new AppError(
-        'No check-in record found for today. Please check in first.',
+        'Bạn chưa thực hiện chấm công vào ca cho ngày hôm nay. Vui lòng Check-in trước.',
         400,
-        'NOT_CHECKED_IN'
+        'CHUA_CHECK_IN'
       );
     }
 
     if (attendance.checkOut) {
       throw new AppError(
-        'You have already checked out today',
+        'Bạn đã thực hiện kết thúc ca (Check-out) hôm nay rồi.',
         409,
-        'ALREADY_CHECKED_OUT'
+        'DA_CHECK_OUT'
       );
     }
 
-    if (!attendance.checkIn) {
-      throw new AppError('Invalid attendance state', 400, 'INVALID_STATE');
-    }
-
-    // 2. GPS VERIFICATION for check-out
+    // 2. Xác thực GPS Geofence lúc ra về
     const { allowed, distance } = isWithinRadius(
       input.latitude,
       input.longitude,
@@ -219,15 +220,15 @@ export class AttendanceService {
 
     if (!allowed) {
       throw new AppError(
-        `Your location is outside the allowed check-out area. You are ${distance}m from ${attendance.location.name}.`,
+        `Vị trí của bạn đang ở ngoài khu vực kết thúc ca! Bạn đang cách ${attendance.location.name} khoảng ${distance}m (Bán kính quy định: ${attendance.location.allowedRadiusMeters}m).`,
         400,
-        'OUTSIDE_ALLOWED_RADIUS'
+        'NGOAI_BAN_KINH_CHO_PHEP'
       );
     }
 
     const now = new Date();
 
-    // 3. Calculate working metrics — BACKEND ONLY
+    // 3. Tính toán các chỉ số thời gian làm việc thực tế (khấu trừ giờ nghỉ trưa)
     const workingHours = calculateWorkingHours(
       attendance.checkIn,
       now,
@@ -248,12 +249,10 @@ export class AttendanceService {
       today
     );
 
-    // 4. Determine final status
+    // 4. Xác định trạng thái tổng kết của ca làm việc
     let status: AttendanceStatus;
-    if (attendance.lateMinutes > 0 && earlyLeaveMinutes > 0) {
-      status = 'LATE'; // Late takes priority; both conditions present
-    } else if (attendance.lateMinutes > 0) {
-      status = 'LATE';
+    if (attendance.lateMinutes > 0) {
+      status = 'LATE'; // Đi trễ là vi phạm chính
     } else if (earlyLeaveMinutes > 0) {
       status = 'EARLY_LEAVE';
     } else if (overtimeHours > 0) {
@@ -262,7 +261,7 @@ export class AttendanceService {
       status = 'PRESENT';
     }
 
-    // 5. Update attendance record
+    // 5. Cập nhật bản ghi chấm công
     const updated = await prisma.attendance.update({
       where: { id: attendance.id },
       data: {
@@ -281,12 +280,15 @@ export class AttendanceService {
       },
     });
 
-    // 6. Notification
+    // 6. Gửi thông báo hoàn thành ca
+    const gioRa = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     await prisma.notification.create({
       data: {
         userId,
-        title: 'Successful Check-Out',
-        message: `You checked out at ${now.toLocaleTimeString()}. Working time: ${workingHours.toFixed(2)} hours${overtimeHours > 0 ? `, Overtime: ${overtimeHours.toFixed(2)}h` : ''}`,
+        title: 'Chấm công kết thúc ca thành công',
+        message: `Bạn đã tan ca lúc ${gioRa}. Tổng thời gian làm việc thực tế: ${workingHours.toFixed(2)} giờ${
+          overtimeHours > 0 ? `, Tăng ca (OT): ${overtimeHours.toFixed(2)} giờ` : ''
+        }.`,
         type: 'CHECK_OUT',
       },
     });
@@ -310,7 +312,7 @@ export class AttendanceService {
       where: { employeeId, workDate: today },
       include: {
         shift: true,
-        location: { select: { id: true, name: true, address: true } },
+        location: { select: { id: true, name: true, address: true, allowedRadiusMeters: true, latitude: true, longitude: true } },
       },
     });
   }
@@ -319,10 +321,12 @@ export class AttendanceService {
     const { page, limit, startDate, endDate, sortOrder } = query;
     const skip = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { employeeId };
-    if (startDate) where.workDate = { ...where.workDate, gte: new Date(startDate) };
-    if (endDate) where.workDate = { ...where.workDate, lte: new Date(endDate) };
+    if (startDate || endDate) {
+      where.workDate = {};
+      if (startDate) where.workDate.gte = new Date(startDate);
+      if (endDate) where.workDate.lte = new Date(endDate);
+    }
 
     const [data, total] = await Promise.all([
       prisma.attendance.findMany({
@@ -364,7 +368,6 @@ export class AttendanceService {
     } = query;
     const skip = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (employeeId) where.employeeId = employeeId;
     if (locationId) where.locationId = locationId;
@@ -379,7 +382,7 @@ export class AttendanceService {
       where.employee = { departmentId };
     }
 
-    // Manager scope
+    // Giới hạn phạm vi nghiêm ngặt đối với Trưởng phòng (MANAGER)
     if (requestingUserRole === 'MANAGER') {
       const managerEmployee = await prisma.employee.findFirst({
         where: { userId: requestingUserId },

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/client';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ShieldAlert, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const AuditLogsPage: React.FC = () => {
@@ -23,7 +22,7 @@ export const AuditLogsPage: React.FC = () => {
       setLogs(res.data.data);
       if (res.data.meta) setMeta(res.data.meta);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -33,22 +32,41 @@ export const AuditLogsPage: React.FC = () => {
     fetchLogs();
   }, [page, entity, action]);
 
+  const getActionBadge = (act: string) => {
+    const map: Record<string, { label: string; color: string }> = {
+      CREATE: { label: 'THÊM MỚI', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      UPDATE: { label: 'CẬP NHẬT', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      DELETE: { label: 'XÓA / HỦY', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+      LOGIN: { label: 'ĐĂNG NHẬP', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+      LOGOUT: { label: 'ĐĂNG XUẤT', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+      APPROVE: { label: 'PHÊ DUYỆT', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+      REJECT: { label: 'TỪ CHỐI', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+      ASSIGN: { label: 'PHÂN CÔNG', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    };
+    const cur = map[act] || { label: act, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${cur.color}`}>
+        {cur.label}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">System Audit Logs</h2>
+        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Nhật Ký Kiểm Toán Hệ Thống (Audit Logs)</h2>
         <p className="text-sm text-slate-500 mt-0.5">
-          Immutable trail of administrative actions, authentication events, and data modifications
+          Ghi nhận toàn bộ thao tác quản trị, sự kiện đăng nhập và biến động dữ liệu để đảm bảo tính minh bạch
         </p>
       </div>
 
-      {/* Filter Row */}
+      {/* Bộ lọc */}
       <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div>
-          <label className="block font-semibold text-slate-600 mb-1">Entity Name</label>
+          <label className="block font-semibold text-slate-600 mb-1">Đối tượng tác động (Entity)</label>
           <input
             type="text"
-            placeholder="e.g. Employee, Shift, LeaveRequest..."
+            placeholder="Ví dụ: NhanVien, CaLamViec, DonNghiPhep..."
             value={entity}
             onChange={(e) => {
               setEntity(e.target.value);
@@ -58,7 +76,7 @@ export const AuditLogsPage: React.FC = () => {
           />
         </div>
         <div>
-          <label className="block font-semibold text-slate-600 mb-1">Action Type</label>
+          <label className="block font-semibold text-slate-600 mb-1">Loại hành động</label>
           <select
             value={action}
             onChange={(e) => {
@@ -67,38 +85,38 @@ export const AuditLogsPage: React.FC = () => {
             }}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
           >
-            <option value="">All Actions</option>
-            <option value="CREATE">CREATE</option>
-            <option value="UPDATE">UPDATE</option>
-            <option value="DELETE">DELETE</option>
-            <option value="LOGIN">LOGIN</option>
-            <option value="LOGOUT">LOGOUT</option>
-            <option value="APPROVE">APPROVE</option>
-            <option value="REJECT">REJECT</option>
-            <option value="ASSIGN">ASSIGN</option>
+            <option value="">Tất cả hành động</option>
+            <option value="CREATE">THÊM MỚI (CREATE)</option>
+            <option value="UPDATE">CẬP NHẬT (UPDATE)</option>
+            <option value="DELETE">XÓA (DELETE)</option>
+            <option value="LOGIN">ĐĂNG NHẬP (LOGIN)</option>
+            <option value="LOGOUT">ĐĂNG XUẤT (LOGOUT)</option>
+            <option value="APPROVE">PHÊ DUYỆT (APPROVE)</option>
+            <option value="REJECT">TỪ CHỐI (REJECT)</option>
+            <option value="ASSIGN">PHÂN CÔNG (ASSIGN)</option>
           </select>
         </div>
       </div>
 
-      {/* Audit Log Table */}
+      {/* Bảng Nhật ký kiểm toán */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <LoadingSpinner text="Loading audit trail..." />
+          <LoadingSpinner text="Đang tải nhật ký kiểm toán..." />
         ) : logs.length === 0 ? (
-          <div className="p-12 text-center text-slate-600">
-            <p className="text-sm font-medium">No audit logs found.</p>
+          <div className="p-12 text-center text-slate-400">
+            <p className="text-sm font-medium">Chưa có nhật ký nào được ghi nhận.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-600 uppercase font-semibold tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 uppercase font-semibold tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">User</th>
-                  <th className="py-3 px-4">Action</th>
-                  <th className="py-3 px-4">Target Entity</th>
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4">IP Address</th>
+                  <th className="py-3 px-4">Thời gian</th>
+                  <th className="py-3 px-4">Người thực hiện</th>
+                  <th className="py-3 px-4">Hành động</th>
+                  <th className="py-3 px-4">Đối tượng</th>
+                  <th className="py-3 px-4">Nội dung chi tiết</th>
+                  <th className="py-3 px-4">Địa chỉ IP</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -108,16 +126,14 @@ export const AuditLogsPage: React.FC = () => {
                       {format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </td>
                     <td className="py-3 px-4 font-medium text-slate-900">
-                      {log.user?.email || 'System'}
+                      {log.user?.email || 'Hệ thống'}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                        {log.action}
-                      </span>
+                      {getActionBadge(log.action)}
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-800">{log.entity}</td>
                     <td className="py-3 px-4 text-slate-600">{log.description}</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">{log.ipAddress || '—'}</td>
+                    <td className="py-3 px-4 font-mono text-slate-400">{log.ipAddress || '—'}</td>
                   </tr>
                 ))}
               </tbody>

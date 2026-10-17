@@ -10,9 +10,9 @@ async function hash(pwd: string) {
 }
 
 async function main() {
-  console.log('🌱 Starting deterministic database seeding...');
+  console.log('🌱 Bắt đầu khởi tạo dữ liệu mẫu thuần Việt cho Supabase / PostgreSQL...');
 
-  // Clear existing data in reverse order of foreign keys
+  // Xóa sạch dữ liệu cũ theo đúng thứ tự ràng buộc khóa ngoại
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.attendance.deleteMany();
@@ -29,45 +29,45 @@ async function main() {
   await prisma.shift.deleteMany();
   await prisma.location.deleteMany();
 
-  console.log('🧹 Cleaned existing records.');
+  console.log('🧹 Đã dọn dẹp các bảng dữ liệu cũ.');
 
-  // 1. Create Departments
+  // 1. Tạo các Phòng ban
   const deptIT = await prisma.department.create({
-    data: { name: 'Information Technology', description: 'Software engineering, DevOps, and IT support' },
+    data: { name: 'Phòng Công nghệ Thông tin', description: 'Phát triển phần mềm, vận hành hạ tầng DevOps và an toàn thông tin' },
   });
   const deptHR = await prisma.department.create({
-    data: { name: 'Human Resources', description: 'Talent acquisition, employee relations, and culture' },
+    data: { name: 'Phòng Nhân sự & Đào tạo', description: 'Quản trị nhân tài, chế độ phúc lợi, văn hóa và đào tạo doanh nghiệp' },
   });
   const deptFinance = await prisma.department.create({
-    data: { name: 'Finance & Accounting', description: 'Budgeting, payroll, and fiscal management' },
+    data: { name: 'Phòng Tài chính - Kế toán', description: 'Quản lý ngân sách, kiểm toán, chi tiêu và hạch toán bảng lương' },
   });
   const deptMarketing = await prisma.department.create({
-    data: { name: 'Marketing & Sales', description: 'Brand marketing, customer acquisition, and growth' },
+    data: { name: 'Phòng Kinh doanh & Tiếp thị', description: 'Phát triển thị trường, quan hệ đối tác và xây dựng thương hiệu' },
   });
 
-  // 2. Create Positions
-  const posAdmin = await prisma.position.create({ data: { name: 'System Administrator', description: 'IT systems & security' } });
-  const posITManager = await prisma.position.create({ data: { name: 'IT Department Manager', description: 'Technical leadership' } });
-  const posHRManager = await prisma.position.create({ data: { name: 'HR Department Manager', description: 'HR leadership' } });
-  const posDev = await prisma.position.create({ data: { name: 'Full Stack Engineer', description: 'Software development' } });
-  const posQA = await prisma.position.create({ data: { name: 'QA Engineer', description: 'Testing and quality' } });
-  const posHR = await prisma.position.create({ data: { name: 'HR Specialist', description: 'Operations and recruitment' } });
-  const posAccountant = await prisma.position.create({ data: { name: 'Senior Accountant', description: 'Financial ledger' } });
+  // 2. Tạo Chức vụ
+  const posAdmin = await prisma.position.create({ data: { name: 'Quản trị Hệ thống', description: 'Phụ trách toàn bộ hệ thống máy chủ' } });
+  const posITManager = await prisma.position.create({ data: { name: 'Trưởng phòng Công nghệ Thông tin', description: 'Lãnh đạo kỹ thuật' } });
+  const posHRManager = await prisma.position.create({ data: { name: 'Trưởng phòng Nhân sự', description: 'Quản lý nhân sự' } });
+  const posDev = await prisma.position.create({ data: { name: 'Kỹ sư Phần mềm Full-Stack', description: 'Lập trình viên' } });
+  const posQA = await prisma.position.create({ data: { name: 'Kỹ sư Kiểm thử Chất lượng (QA)', description: 'Kiểm thử phần mềm' } });
+  const posHR = await prisma.position.create({ data: { name: 'Chuyên viên Nhân sự & Tuyển dụng', description: 'Nghiệp vụ nhân sự' } });
+  const posAccountant = await prisma.position.create({ data: { name: 'Kế toán viên Tổng hợp', description: 'Hạch toán sổ sách' } });
 
-  // 3. Create Shifts
+  // 3. Tạo Ca làm việc (Shifts)
   const shiftStandard = await prisma.shift.create({
     data: {
-      name: 'Standard Morning Shift',
+      name: 'Ca Hành Chính Chuẩn',
       startTime: '08:00',
       endTime: '17:00',
       breakStart: '12:00',
       breakEnd: '13:00',
-      gracePeriodMinutes: 10,
+      gracePeriodMinutes: 15, // Cho phép ân hạn đi trễ 15 phút
     },
   });
   const shiftAfternoon = await prisma.shift.create({
     data: {
-      name: 'Afternoon Shift',
+      name: 'Ca Chiều & Tối',
       startTime: '13:00',
       endTime: '21:00',
       breakStart: '17:00',
@@ -77,7 +77,7 @@ async function main() {
   });
   const shiftFlexible = await prisma.shift.create({
     data: {
-      name: 'Flexible Day Shift',
+      name: 'Ca Làm Việc Linh Hoạt',
       startTime: '09:00',
       endTime: '18:00',
       breakStart: '12:30',
@@ -86,20 +86,20 @@ async function main() {
     },
   });
 
-  // 4. Create Locations (Workplaces)
+  // 4. Tạo Văn phòng / Địa điểm chấm công GPS Geofence
   const locHCMC = await prisma.location.create({
     data: {
-      name: 'Ho Chi Minh City HQ',
-      address: '72 Le Thanh Ton, District 1, Ho Chi Minh City',
+      name: 'Trụ sở chính TP. Hồ Chí Minh',
+      address: 'Tòa nhà Vincom Center, 72 Lê Thánh Tôn, Bến Nghé, Quận 1, TP.HCM',
       latitude: 10.776889,
       longitude: 106.700806,
-      allowedRadiusMeters: 150,
+      allowedRadiusMeters: 150, // Bán kính cho phép 150 mét
     },
   });
   const locDaNang = await prisma.location.create({
     data: {
-      name: 'Da Nang Tech Hub',
-      address: '15 Quang Trung, Hai Chau, Da Nang',
+      name: 'Chi nhánh Đà Nẵng',
+      address: 'Khu Công viên Phần mềm, 15 Quang Trung, Hải Châu, Đà Nẵng',
       latitude: 16.054407,
       longitude: 108.202167,
       allowedRadiusMeters: 100,
@@ -107,42 +107,42 @@ async function main() {
   });
   const locHanoi = await prisma.location.create({
     data: {
-      name: 'Hanoi Branch',
-      address: '54 Lieu Giai, Ba Dinh, Hanoi',
+      name: 'Chi nhánh Hà Nội',
+      address: 'Tòa nhà Lotte Center, 54 Liễu Giai, Cống Vị, Ba Đình, Hà Nội',
       latitude: 21.028511,
       longitude: 105.854444,
       allowedRadiusMeters: 120,
     },
   });
 
-  // 5. Create Leave Types
+  // 5. Tạo Các loại nghỉ phép
   const leaveAnnual = await prisma.leaveType.create({
-    data: { name: 'Annual Leave', defaultDaysPerYear: 12, isPaid: true },
+    data: { name: 'Nghỉ phép năm', defaultDaysPerYear: 12, isPaid: true },
   });
   const leaveSick = await prisma.leaveType.create({
-    data: { name: 'Sick Leave', defaultDaysPerYear: 5, isPaid: true },
+    data: { name: 'Nghỉ ốm hưởng BHXH', defaultDaysPerYear: 5, isPaid: true },
   });
   const leavePersonal = await prisma.leaveType.create({
-    data: { name: 'Personal Leave', defaultDaysPerYear: 3, isPaid: true },
+    data: { name: 'Nghỉ việc riêng hưởng nguyên lương', defaultDaysPerYear: 3, isPaid: true },
   });
   const leaveUnpaid = await prisma.leaveType.create({
-    data: { name: 'Unpaid Leave', defaultDaysPerYear: 0, isPaid: false },
+    data: { name: 'Nghỉ không hưởng lương', defaultDaysPerYear: 0, isPaid: false },
   });
 
-  // 6. Create Users & Employees
+  // 6. Tạo Tài khoản Người dùng & Hồ sơ Nhân viên thuần Việt
   const adminPassword = await hash('Admin@123');
   const managerPassword = await hash('Manager@123');
   const employeePassword = await hash('Employee@123');
 
-  // Admin
+  // Quản trị viên (ADMIN)
   const adminUser = await prisma.user.create({
     data: { email: 'admin@company.com', passwordHash: adminPassword, role: UserRole.ADMIN },
   });
   const adminEmp = await prisma.employee.create({
     data: {
       userId: adminUser.id,
-      employeeCode: 'EMP0001',
-      fullName: 'System Administrator',
+      employeeCode: 'NV0001',
+      fullName: 'Trần Quản Trị',
       phone: '0901234567',
       gender: Gender.MALE,
       hireDate: new Date('2023-01-01'),
@@ -152,15 +152,15 @@ async function main() {
     },
   });
 
-  // Manager IT
+  // Trưởng phòng IT (MANAGER)
   const managerITUser = await prisma.user.create({
     data: { email: 'manager.it@company.com', passwordHash: managerPassword, role: UserRole.MANAGER },
   });
   const managerITEmp = await prisma.employee.create({
     data: {
       userId: managerITUser.id,
-      employeeCode: 'EMP0002',
-      fullName: 'Tran Van Minh (IT Manager)',
+      employeeCode: 'NV0002',
+      fullName: 'Nguyễn Văn Minh (Trưởng phòng IT)',
       phone: '0902345678',
       gender: Gender.MALE,
       hireDate: new Date('2023-02-15'),
@@ -171,15 +171,15 @@ async function main() {
   });
   await prisma.department.update({ where: { id: deptIT.id }, data: { managerId: managerITEmp.id } });
 
-  // Manager HR
+  // Trưởng phòng HR (MANAGER)
   const managerHRUser = await prisma.user.create({
     data: { email: 'manager.hr@company.com', passwordHash: managerPassword, role: UserRole.MANAGER },
   });
   const managerHREmp = await prisma.employee.create({
     data: {
       userId: managerHRUser.id,
-      employeeCode: 'EMP0003',
-      fullName: 'Nguyen Thi Mai (HR Manager)',
+      employeeCode: 'NV0003',
+      fullName: 'Trần Thị Thu Mai (Trưởng phòng Nhân sự)',
       phone: '0903456789',
       gender: Gender.FEMALE,
       hireDate: new Date('2023-03-01'),
@@ -190,13 +190,13 @@ async function main() {
   });
   await prisma.department.update({ where: { id: deptHR.id }, data: { managerId: managerHREmp.id } });
 
-  // Standard Employees
+  // Danh sách Nhân viên tiêu chuẩn thuần Việt
   const employeeData = [
-    { email: 'emp001@company.com', name: 'Le Hoang Nam', code: 'EMP0004', dept: deptIT.id, pos: posDev.id, gender: Gender.MALE, loc: locHCMC.id },
-    { email: 'emp002@company.com', name: 'Pham Thu Huong', code: 'EMP0005', dept: deptIT.id, pos: posQA.id, gender: Gender.FEMALE, loc: locHCMC.id },
-    { email: 'emp003@company.com', name: 'Vu Quoc Bao', code: 'EMP0006', dept: deptHR.id, pos: posHR.id, gender: Gender.MALE, loc: locHCMC.id },
-    { email: 'emp004@company.com', name: 'Do Thi Lan', code: 'EMP0007', dept: deptFinance.id, pos: posAccountant.id, gender: Gender.FEMALE, loc: locDaNang.id },
-    { email: 'emp005@company.com', name: 'Nguyen Thanh Son', code: 'EMP0008', dept: deptIT.id, pos: posDev.id, gender: Gender.MALE, loc: locHCMC.id },
+    { email: 'emp001@company.com', name: 'Lê Hoàng Nam', code: 'NV0004', dept: deptIT.id, pos: posDev.id, gender: Gender.MALE, loc: locHCMC.id },
+    { email: 'emp002@company.com', name: 'Phạm Thu Hương', code: 'NV0005', dept: deptIT.id, pos: posQA.id, gender: Gender.FEMALE, loc: locHCMC.id },
+    { email: 'emp003@company.com', name: 'Vũ Quốc Bảo', code: 'NV0006', dept: deptHR.id, pos: posHR.id, gender: Gender.MALE, loc: locHCMC.id },
+    { email: 'emp004@company.com', name: 'Đỗ Thị Lan', code: 'NV0007', dept: deptFinance.id, pos: posAccountant.id, gender: Gender.FEMALE, loc: locDaNang.id },
+    { email: 'emp005@company.com', name: 'Nguyễn Thanh Sơn', code: 'NV0008', dept: deptIT.id, pos: posDev.id, gender: Gender.MALE, loc: locHCMC.id },
   ];
 
   const allEmployees = [adminEmp, managerITEmp, managerHREmp];
@@ -210,7 +210,7 @@ async function main() {
         userId: user.id,
         employeeCode: emp.code,
         fullName: emp.name,
-        phone: '090' + Math.floor(1000000 + Math.random() * 9000000),
+        phone: '09' + Math.floor(10000000 + Math.random() * 90000000),
         gender: emp.gender,
         hireDate: new Date('2023-06-01'),
         departmentId: emp.dept,
@@ -221,9 +221,12 @@ async function main() {
     allEmployees.push(createdEmp);
   }
 
-  // 7. Assign Shifts and Locations to all employees
+  // 7. Gán Ca làm việc, Văn phòng và Quỹ phép năm cho toàn bộ nhân viên
   const effectiveFrom = new Date('2023-01-01');
+  const currentYear = new Date().getFullYear();
+
   for (const emp of allEmployees) {
+    // Phân ca
     await prisma.employeeShift.create({
       data: {
         employeeId: emp.id,
@@ -232,6 +235,8 @@ async function main() {
         isActive: true,
       },
     });
+
+    // Phân bổ địa điểm văn phòng
     await prisma.employeeLocation.create({
       data: {
         employeeId: emp.id,
@@ -241,18 +246,18 @@ async function main() {
       },
     });
 
-    // Leave Balances for 2024
+    // Quỹ phép năm
     await prisma.leaveBalance.createMany({
       data: [
-        { employeeId: emp.id, leaveTypeId: leaveAnnual.id, year: 2024, totalDays: 12, usedDays: 2, pendingDays: 0 },
-        { employeeId: emp.id, leaveTypeId: leaveSick.id, year: 2024, totalDays: 5, usedDays: 1, pendingDays: 0 },
-        { employeeId: emp.id, leaveTypeId: leavePersonal.id, year: 2024, totalDays: 3, usedDays: 0, pendingDays: 0 },
+        { employeeId: emp.id, leaveTypeId: leaveAnnual.id, year: currentYear, totalDays: 12, usedDays: 2, pendingDays: 0 },
+        { employeeId: emp.id, leaveTypeId: leaveSick.id, year: currentYear, totalDays: 5, usedDays: 1, pendingDays: 0 },
+        { employeeId: emp.id, leaveTypeId: leavePersonal.id, year: currentYear, totalDays: 3, usedDays: 0, pendingDays: 0 },
       ],
     });
   }
 
-  // 8. Generate Realistic Deterministic Attendance Data for Past 45 Days
-  console.log('📊 Generating 45-day historical attendance records...');
+  // 8. Tạo dữ liệu lịch sử chấm công 45 ngày làm việc vừa qua với tính biến thiên chân thực
+  console.log('📊 Đang tạo 45 ngày lịch sử chấm công thực tế...');
   const baseLat = 10.776889;
   const baseLng = 106.700806;
 
@@ -260,23 +265,23 @@ async function main() {
     const workDate = subDays(new Date(), dayOffset);
     const dayOfWeek = workDate.getDay();
 
-    // Skip Saturday (6) and Sunday (0)
+    // Bỏ qua Thứ Bảy (6) và Chủ Nhật (0)
     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
     for (let empIndex = 0; empIndex < allEmployees.length; empIndex++) {
       const emp = allEmployees[empIndex];
-      const deterministicSeed = (dayOffset * 7 + empIndex * 13) % 100;
+      const seed = (dayOffset * 7 + empIndex * 13) % 100;
 
-      // Deterministic patterns:
-      // ~78% On time
-      // ~10% Late
-      // ~4% Early Leave
-      // ~4% Overtime
-      // ~2% Leave
-      // ~2% Absent
+      // Phân bổ thực tế:
+      // ~78% Đúng giờ
+      // ~10% Đi trễ
+      // ~4% Về sớm
+      // ~4% Tăng ca
+      // ~2% Nghỉ phép có duyệt
+      // ~2% Vắng không phép
 
-      if (deterministicSeed < 2) {
-        // ABSENT
+      if (seed < 2) {
+        // VẮNG KHÔNG PHÉP
         await prisma.attendance.create({
           data: {
             employeeId: emp.id,
@@ -287,11 +292,11 @@ async function main() {
             lateMinutes: 0,
             workingHours: 0,
             overtimeHours: 0,
-            notes: 'Unexcused absence',
+            notes: 'Vắng mặt không có lý do',
           },
         });
-      } else if (deterministicSeed < 4) {
-        // LEAVE
+      } else if (seed < 4) {
+        // NGHỈ PHÉP CÓ DUYỆT
         await prisma.attendance.create({
           data: {
             employeeId: emp.id,
@@ -302,12 +307,12 @@ async function main() {
             lateMinutes: 0,
             workingHours: 0,
             overtimeHours: 0,
-            notes: 'Approved annual leave',
+            notes: 'Nghỉ phép năm đã được phê duyệt',
           },
         });
-      } else if (deterministicSeed < 14) {
-        // LATE (check-in between 08:15 and 08:35)
-        const lateMins = 15 + ((deterministicSeed * 3) % 20);
+      } else if (seed < 14) {
+        // ĐI TRỄ (Check-in từ 08:20 đến 08:40)
+        const lateMins = 20 + ((seed * 2) % 20);
         let checkInTime = setHours(workDate, 8);
         checkInTime = setMinutes(checkInTime, lateMins);
 
@@ -324,17 +329,17 @@ async function main() {
             checkOut: checkOutTime,
             checkInLatitude: baseLat + 0.0001,
             checkInLongitude: baseLng + 0.0001,
-            checkInAccuracy: 12.5,
+            checkInAccuracy: 12.0,
             checkOutLatitude: baseLat,
             checkOutLongitude: baseLng,
             checkOutAccuracy: 10.0,
-            lateMinutes: lateMins - 10, // minus grace period
+            lateMinutes: lateMins - 15, // Trừ 15 phút ân hạn
             workingHours: 7.75,
             status: AttendanceStatus.LATE,
           },
         });
-      } else if (deterministicSeed < 18) {
-        // EARLY LEAVE (leaves at 16:15)
+      } else if (seed < 18) {
+        // VỀ SỚM (Về lúc 16:15)
         let checkInTime = setHours(workDate, 7);
         checkInTime = setMinutes(checkInTime, 55);
 
@@ -360,8 +365,8 @@ async function main() {
             status: AttendanceStatus.EARLY_LEAVE,
           },
         });
-      } else if (deterministicSeed < 24) {
-        // OVERTIME (leaves at 18:30)
+      } else if (seed < 24) {
+        // TĂNG CA (Về lúc 18:30)
         let checkInTime = setHours(workDate, 7);
         checkInTime = setMinutes(checkInTime, 50);
 
@@ -388,12 +393,12 @@ async function main() {
           },
         });
       } else {
-        // ON TIME (07:50 - 08:05 check-in, 17:00 - 17:10 check-out)
-        const checkInOffset = (deterministicSeed % 15) - 10; // -10m to +5m
+        // ĐÚNG GIỜ (Check-in 07:50 - 08:05, Check-out 17:00 - 17:10)
+        const checkInOffset = (seed % 15) - 10;
         let checkInTime = setHours(workDate, 8);
         checkInTime = addMinutes(checkInTime, checkInOffset);
 
-        const checkOutOffset = deterministicSeed % 15;
+        const checkOutOffset = seed % 15;
         let checkOutTime = setHours(workDate, 17);
         checkOutTime = addMinutes(checkOutTime, checkOutOffset);
 
@@ -419,15 +424,15 @@ async function main() {
     }
   }
 
-  // 9. Leave Requests
+  // 9. Tạo Đơn xin nghỉ phép mẫu
   await prisma.leaveRequest.create({
     data: {
-      employeeId: allEmployees[3].id, // emp001
+      employeeId: allEmployees[3].id, // NV0004 Lê Hoàng Nam
       leaveTypeId: leaveAnnual.id,
       startDate: subDays(new Date(), 10),
       endDate: subDays(new Date(), 9),
       totalDays: 2,
-      reason: 'Family trip vacation',
+      reason: 'Về quê thăm gia đình',
       status: 'APPROVED',
       reviewedBy: adminUser.id,
       reviewedAt: subDays(new Date(), 11),
@@ -436,12 +441,12 @@ async function main() {
 
   await prisma.leaveRequest.create({
     data: {
-      employeeId: allEmployees[4].id, // emp002
+      employeeId: allEmployees[4].id, // NV0005 Phạm Thu Hương
       leaveTypeId: leaveSick.id,
       startDate: subDays(new Date(), 5),
       endDate: subDays(new Date(), 5),
       totalDays: 1,
-      reason: 'Doctor appointment with fever',
+      reason: 'Bị sốt cảm cúm, đi khám bệnh viện',
       status: 'APPROVED',
       reviewedBy: managerITUser.id,
       reviewedAt: subDays(new Date(), 6),
@@ -450,52 +455,53 @@ async function main() {
 
   await prisma.leaveRequest.create({
     data: {
-      employeeId: allEmployees[5].id, // emp003
+      employeeId: allEmployees[5].id, // NV0006 Vũ Quốc Bảo
       leaveTypeId: leavePersonal.id,
       startDate: new Date(),
       endDate: addMinutes(new Date(), 1440 * 2),
       totalDays: 2,
-      reason: 'Personal urgent matters',
+      reason: 'Giải quyết công việc gia đình đột xuất',
       status: 'PENDING',
     },
   });
 
-  // 10. Notifications
+  // 10. Tạo Thông báo hệ thống Tiếng Việt
   for (const emp of allEmployees) {
     await prisma.notification.create({
       data: {
         userId: emp.userId,
-        title: 'Welcome to Workforce Attendance & Analytics',
-        message: 'Your account is ready. Review your assigned shift and workplace location.',
+        title: 'Chào mừng bạn đến với Hệ thống Chấm công & Phân tích Nhân sự',
+        message: 'Tài khoản của bạn đã được kích hoạt thành công. Vui lòng kiểm tra ca làm việc và văn phòng chấm công được phân công.',
         type: 'SYSTEM',
         isRead: true,
       },
     });
   }
 
-  // 11. Audit Logs
+  // 11. Tạo Nhật ký kiểm toán mẫu (Audit Log)
   await prisma.auditLog.create({
     data: {
       userId: adminUser.id,
       action: 'CREATE',
-      entity: 'System',
-      description: 'System initialization and deterministic database seeding completed',
+      entity: 'Hệ thống',
+      description: 'Khởi tạo hệ thống và cấu hình dữ liệu mẫu chuẩn hóa doanh nghiệp thành công',
     },
   });
 
-  console.log('✅ Deterministic seed completed successfully!');
-  console.log('----------------------------------------------------');
-  console.log('Default Credentials:');
-  console.log('Admin:       admin@company.com      | Admin@123');
-  console.log('Manager IT:  manager.it@company.com | Manager@123');
-  console.log('Manager HR:  manager.hr@company.com | Manager@123');
-  console.log('Employee:    emp001@company.com     | Employee@123');
-  console.log('----------------------------------------------------');
+  console.log('✅ Khởi tạo dữ liệu mẫu hoàn tất thành công!');
+  console.log('====================================================');
+  console.log('Danh sách tài khoản kiểm thử:');
+  console.log('1. Quản trị viên:    admin@company.com      | Admin@123');
+  console.log('2. Trưởng phòng IT:  manager.it@company.com | Manager@123');
+  console.log('3. Trưởng phòng HR:  manager.hr@company.com | Manager@123');
+  console.log('4. Nhân viên 1:      emp001@company.com     | Employee@123 (Văn phòng TP.HCM)');
+  console.log('5. Nhân viên 4:      emp004@company.com     | Employee@123 (Chi nhánh Đà Nẵng)');
+  console.log('====================================================');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Lỗi khởi tạo dữ liệu mẫu:', e);
     process.exit(1);
   })
   .finally(async () => {

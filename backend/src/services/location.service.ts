@@ -13,10 +13,10 @@ export class LocationService {
       data: {
         userId: createdByUserId,
         action: 'CREATE',
-        entity: 'Location',
+        entity: 'DiaDiemVanPhong',
         entityId: location.id,
         newValues: { name: location.name, address: location.address },
-        description: `Created workplace ${location.name}`,
+        description: `Thêm địa điểm văn phòng chấm công GPS: "${location.name}" (Bán kính: ${location.allowedRadiusMeters}m)`,
       },
     });
     return location;
@@ -28,7 +28,7 @@ export class LocationService {
 
   async findById(id: string) {
     const loc = await prisma.location.findUnique({ where: { id } });
-    if (!loc) throw new AppError('Location not found', 404, 'NOT_FOUND');
+    if (!loc) throw new AppError('Không tìm thấy địa điểm văn phòng.', 404, 'KHONG_TIM_THAY');
     return loc;
   }
 
@@ -43,11 +43,11 @@ export class LocationService {
       data: {
         userId: updatedByUserId,
         action: 'UPDATE',
-        entity: 'Location',
+        entity: 'DiaDiemVanPhong',
         entityId: id,
         oldValues: { allowedRadiusMeters: existing.allowedRadiusMeters },
         newValues: { allowedRadiusMeters: updated.allowedRadiusMeters },
-        description: `Updated workplace ${existing.name}`,
+        description: `Cập nhật cấu hình địa điểm văn phòng "${existing.name}"`,
       },
     });
     return updated;
@@ -60,9 +60,9 @@ export class LocationService {
       data: {
         userId: deletedByUserId,
         action: 'DELETE',
-        entity: 'Location',
+        entity: 'DiaDiemVanPhong',
         entityId: id,
-        description: `Deactivated workplace ${loc.name}`,
+        description: `Vô hiệu hóa địa điểm văn phòng "${loc.name}"`,
       },
     });
   }
@@ -91,9 +91,9 @@ export class LocationService {
       data: {
         userId: assignedByUserId,
         action: 'ASSIGN',
-        entity: 'EmployeeLocation',
+        entity: 'PhanBoVanPhong',
         entityId: assignment.id,
-        description: `Assigned workplace ${assignment.location.name} to ${assignment.employee.fullName}`,
+        description: `Phân bổ văn phòng làm việc "${assignment.location.name}" cho nhân viên ${assignment.employee.fullName}`,
       },
     });
 

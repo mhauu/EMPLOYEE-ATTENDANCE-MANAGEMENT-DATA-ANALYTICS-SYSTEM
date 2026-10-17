@@ -7,11 +7,7 @@ import {
   TrendingUp,
   Clock,
   Calendar,
-  AlertTriangle,
   Sparkles,
-  PieChart as PieIcon,
-  BarChart2,
-  Filter,
 } from 'lucide-react';
 import {
   LineChart,
@@ -33,11 +29,11 @@ export const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  // Filters
+  // Bộ lọc
   const [departmentId, setDepartmentId] = useState('');
   const [days, setDays] = useState(30);
 
-  // Analytics datasets
+  // Bộ dữ liệu thống kê
   const [trendData, setTrendData] = useState<any[]>([]);
   const [deptAnalytics, setDeptAnalytics] = useState<any[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
@@ -66,7 +62,7 @@ export const AnalyticsPage: React.FC = () => {
       setSummary(sumRes.data.data);
       setDepartments(deptListRes.data.data);
     } catch {
-      // Ignore
+      // Bỏ qua
     } finally {
       setLoading(false);
     }
@@ -85,28 +81,45 @@ export const AnalyticsPage: React.FC = () => {
     ABSENT: '#ef4444',
   };
 
+  const getStatusLabelVi = (status: string) => {
+    switch (status) {
+      case 'PRESENT': return 'Đúng giờ';
+      case 'LATE': return 'Đi trễ';
+      case 'EARLY_LEAVE': return 'Về sớm';
+      case 'OVERTIME': return 'Tăng ca (OT)';
+      case 'LEAVE': return 'Nghỉ phép';
+      case 'ABSENT': return 'Vắng mặt';
+      default: return status;
+    }
+  };
+
+  const localizedPieData = statusDistribution.map((item) => ({
+    ...item,
+    name: getStatusLabelVi(item.status),
+  }));
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Tiêu đề */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Workforce Data Analytics</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Thống Kê & Phân Tích Dữ Liệu Nhân Sự</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Statistical data pipeline transforming raw GPS attendance records into operational insights
+            Hệ thống phân tích tự động chuyển hóa dữ liệu chấm công GPS thành các chỉ số vận hành chiến lược
           </p>
         </div>
 
-        {/* Global Period & Dept Filters */}
+        {/* Bộ lọc thời gian & Phòng ban */}
         <div className="flex items-center gap-2 self-start text-xs">
           <select
             value={days}
             onChange={(e) => setDays(parseInt(e.target.value))}
             className="px-3 py-2 bg-white border border-slate-200 rounded-lg font-medium text-slate-700 shadow-sm"
           >
-            <option value={7}>Last 7 Days</option>
-            <option value={14}>Last 14 Days</option>
-            <option value={30}>Last 30 Days</option>
-            <option value={60}>Last 60 Days</option>
+            <option value={7}>7 ngày vừa qua</option>
+            <option value={14}>14 ngày vừa qua</option>
+            <option value={30}>30 ngày vừa qua</option>
+            <option value={60}>60 ngày vừa qua</option>
           </select>
 
           <select
@@ -114,7 +127,7 @@ export const AnalyticsPage: React.FC = () => {
             onChange={(e) => setDepartmentId(e.target.value)}
             className="px-3 py-2 bg-white border border-slate-200 rounded-lg font-medium text-slate-700 shadow-sm"
           >
-            <option value="">All Departments</option>
+            <option value="">Tất cả phòng ban</option>
             {departments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
@@ -124,67 +137,67 @@ export const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI High-Level Cards */}
+      {/* Các Thẻ KPI Quan Trọng */}
       {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <MetricCard
-            title="Attendance Rate"
+            title="Tỷ Lệ Chuyên Cần"
             value={`${summary.attendanceRate}%`}
-            subtitle="Present / Working Days"
+            subtitle="Số lượt có mặt / Ngày công"
             icon={TrendingUp}
             color="emerald"
           />
           <MetricCard
-            title="Late Occurrence Rate"
+            title="Tỷ Lệ Đi Trễ"
             value={`${summary.lateRate}%`}
-            subtitle="Late / Total Present"
+            subtitle="Số lượt trễ / Tổng lượt vào"
             icon={Clock}
             color="amber"
           />
           <MetricCard
-            title="Average Working Time"
+            title="Thời Gian Làm Việc TB"
             value={`${summary.averageWorkingHours}h`}
-            subtitle="Net of break deduction"
+            subtitle="Đã trừ thời gian nghỉ trưa"
             icon={Calendar}
             color="brand"
           />
           <MetricCard
-            title="Total Overtime Hours"
+            title="Tổng Giờ Tăng Ca"
             value={`${summary.totalOvertimeHours}h`}
-            subtitle="Beyond shift end time"
+            subtitle="Thời gian làm ngoài giờ quy định"
             icon={Sparkles}
             color="blue"
           />
         </div>
       )}
 
-      {/* AI / Automated Data Insights */}
+      {/* Nhận Định Tự Động Từ Dữ Liệu Thực Tế (Data Insights) */}
       <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg shadow-indigo-950/20">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-5 h-5 text-indigo-400" />
           <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-200">
-            Real-Time Automated Data Insights
+            Nhận Định Vận Hành Tự Động (Data Insights)
           </h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
           {insights.map((text, i) => (
             <div key={i} className="p-3 bg-white/10 rounded-xl text-xs backdrop-blur-sm border border-white/10 flex items-start gap-2.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
-              <p className="text-slate-100 leading-relaxed">{text}</p>
+              <p className="text-slate-100 leading-relaxed font-medium">{text}</p>
             </div>
           ))}
         </div>
       </div>
 
       {loading ? (
-        <LoadingSpinner text="Rendering statistical charts..." />
+        <LoadingSpinner text="Đang vẽ biểu đồ thống kê trực quan..." />
       ) : (
         <div className="space-y-6">
-          {/* Chart Row 1: Trend Line Chart */}
+          {/* Biểu đồ 1: Biểu đồ đường xu hướng chấm công theo thời gian */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
             <div className="mb-4">
-              <h3 className="text-sm font-bold text-slate-800">Attendance Volume Trend Over Time</h3>
-              <p className="text-xs text-slate-500">Daily count of employees present, late, on leave, and absent</p>
+              <h3 className="text-sm font-bold text-slate-800">Xu Hướng Số Lượng Chấm Công Theo Thời Gian</h3>
+              <p className="text-xs text-slate-500">Thống kê theo ngày: Đúng giờ, Đi trễ, Nghỉ phép và Vắng mặt</p>
             </div>
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -202,22 +215,22 @@ export const AnalyticsPage: React.FC = () => {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                  <Line type="monotone" dataKey="present" name="Present (On Time)" stroke="#10b981" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="late" name="Late Arrivals" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="absent" name="Absent" stroke="#ef4444" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="leave" name="Approved Leave" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="present" name="Đúng giờ" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="late" name="Đi trễ" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="absent" name="Vắng mặt" stroke="#ef4444" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="leave" name="Nghỉ phép" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Chart Row 2: Department Comparison Bar Chart + Status Donut Chart */}
+          {/* Hàng biểu đồ 2: So sánh phòng ban (Cột) và Phân bổ trạng thái (Tròn) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Department Comparison Bar Chart */}
+            {/* Biểu đồ Cột: So sánh tỷ lệ giữa các phòng ban */}
             <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
               <div className="mb-4">
-                <h3 className="text-sm font-bold text-slate-800">Department Attendance Rate Comparison</h3>
-                <p className="text-xs text-slate-500">Attendance and Late Rate (%) across company departments</p>
+                <h3 className="text-sm font-bold text-slate-800">So Sánh Tỷ Lệ Chuyên Cần Giữa Các Phòng Ban</h3>
+                <p className="text-xs text-slate-500">Tỷ lệ có mặt và Tỷ lệ đi trễ (%) trên từng bộ phận doanh nghiệp</p>
               </div>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -234,33 +247,33 @@ export const AnalyticsPage: React.FC = () => {
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                    <Bar dataKey="attendanceRate" name="Attendance Rate %" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="lateRate" name="Late Rate %" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="attendanceRate" name="Tỷ lệ chuyên cần (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="lateRate" name="Tỷ lệ đi trễ (%)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Attendance Status Pie/Donut Chart */}
+            {/* Biểu đồ Tròn: Phân bổ trạng thái điểm danh */}
             <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
               <div className="mb-2">
-                <h3 className="text-sm font-bold text-slate-800">Status Distribution</h3>
-                <p className="text-xs text-slate-500">Breakdown of attendance conditions</p>
+                <h3 className="text-sm font-bold text-slate-800">Phân Bổ Trạng Thái</h3>
+                <p className="text-xs text-slate-500">Tỷ trọng các trạng thái điểm danh</p>
               </div>
               <div className="h-64 w-full flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={statusDistribution}
+                      data={localizedPieData}
                       dataKey="count"
-                      nameKey="status"
+                      nameKey="name"
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
                       outerRadius={80}
                       paddingAngle={4}
                     >
-                      {statusDistribution.map((entry, index) => (
+                      {localizedPieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.status] || '#94a3b8'} />
                       ))}
                     </Pie>

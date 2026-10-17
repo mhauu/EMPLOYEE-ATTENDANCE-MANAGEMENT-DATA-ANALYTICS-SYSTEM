@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { Bell, LogOut, Check, CheckCheck } from 'lucide-react';
+import { Bell, LogOut, CheckCheck } from 'lucide-react';
 import api from '../api/client';
 import { NotificationItem } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -17,7 +18,7 @@ export const Navbar: React.FC = () => {
       setNotifications(res.data.data.notifications || []);
       setUnreadCount(res.data.data.unreadCount || 0);
     } catch {
-      // Ignore
+      // Bỏ qua lỗi ngầm
     }
   };
 
@@ -33,7 +34,7 @@ export const Navbar: React.FC = () => {
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
-      // Ignore
+      // Bỏ qua
     }
   };
 
@@ -45,7 +46,16 @@ export const Navbar: React.FC = () => {
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {
-      // Ignore
+      // Bỏ qua
+    }
+  };
+
+  const getRoleName = (r?: string) => {
+    switch (r) {
+      case 'ADMIN': return 'Quản trị viên';
+      case 'MANAGER': return 'Trưởng phòng';
+      case 'EMPLOYEE': return 'Nhân viên';
+      default: return r;
     }
   };
 
@@ -53,17 +63,17 @@ export const Navbar: React.FC = () => {
     <header className="h-16 bg-white border-b border-slate-200/80 fixed top-0 right-0 left-64 z-20 flex items-center justify-between px-8">
       <div>
         <h2 className="text-sm font-semibold text-slate-700">
-          Workforce Attendance & Data Analytics
+          Hệ Thống Quản Lý Chấm Công & Phân Tích Dữ Liệu
         </h2>
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Notifications Popover */}
+        {/* Menu Thông báo */}
         <div className="relative">
           <button
             onClick={() => setShowNotifMenu(!showNotifMenu)}
             className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 relative transition-colors"
-            title="Notifications"
+            title="Thông báo hệ thống"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
@@ -77,21 +87,21 @@ export const Navbar: React.FC = () => {
             <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Notifications ({unreadCount})
+                  Thông báo ({unreadCount})
                 </span>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
                   >
-                    <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+                    <CheckCheck className="w-3.5 h-3.5" /> Đánh dấu đã đọc
                   </button>
                 )}
               </div>
 
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
                 {notifications.length === 0 ? (
-                  <p className="text-xs text-slate-600 text-center py-6">No notifications</p>
+                  <p className="text-xs text-slate-400 text-center py-6">Không có thông báo mới</p>
                 ) : (
                   notifications.map((n) => (
                     <div
@@ -110,8 +120,8 @@ export const Navbar: React.FC = () => {
                         )}
                       </div>
                       <p className="text-slate-600 mt-0.5 line-clamp-2">{n.message}</p>
-                      <span className="text-[10px] text-slate-600 mt-1 block">
-                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: vi })}
                       </span>
                     </div>
                   ))
@@ -121,17 +131,21 @@ export const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* User Info & Logout */}
+        {/* Thông tin tài khoản & Nút Đăng xuất */}
         <div className="h-6 w-px bg-slate-200" />
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-slate-800 leading-none">{user?.email}</p>
-            <span className="text-[10px] text-slate-600">{user?.role}</span>
+            <p className="text-xs font-semibold text-slate-800 leading-none">
+              {user?.fullName || user?.email}
+            </p>
+            <span className="text-[10px] text-slate-500 font-medium">
+              {getRoleName(user?.role)}
+            </span>
           </div>
           <button
             onClick={logout}
             className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            title="Log out"
+            title="Đăng xuất khỏi hệ thống"
           >
             <LogOut className="w-5 h-5" />
           </button>
